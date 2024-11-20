@@ -29,7 +29,7 @@ export default function RootStack() {
   const isIos = Platform.OS === 'ios'
 
   useEffect(() => {
-    ;(async () => {
+    (async () => {
       const isDevice = Device.isDevice
       if (!isDevice) return
       console.log('get push token')

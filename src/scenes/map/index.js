@@ -1,25 +1,51 @@
 import React, { useState, useEffect } from 'react'
 import { StyleSheet, View, Alert } from 'react-native'
 import MapView, { Marker, Polyline } from 'react-native-maps'
+import { getFirestore, collection, getDocs } from 'firebase/firestore';
+import { firestore } from '../../firebase/config'
 import * as Location from 'expo-location'
-import { startLocationTracking } from './locationTracker'
+import { startForegroundLocationTracking } from './locationTracker'
+import { UID } from './constants'
 
 export default function Map() {
   const [location, setLocation] = useState(null)
   const [errorMsg, setErrorMsg] = useState(null)
   const [trail, setTrail] = useState([])
+  const [locations, setLocations] = useState([]);
+
+  useEffect(() => {
+    // Loading location data from Firestore
+    const fetchLocationData = async () => {
+      const uid = UID;
+      try {
+        const locationsRef = collection(firestore, `coords/${uid}/locations`);
+        const locationSnapshot = await getDocs(locationsRef);
+
+        const locationData = locationSnapshot.docs.map((doc) => doc.data());
+        setLocations(locationData);
+      } catch (error) {
+        console.error('Error fetching location data:', error);
+      }
+
+      console.log('Locations fetched:', locations);
+    };
+
+    fetchLocationData();
+  }, [])
 
   useEffect(() => {
     (async () => {
-      const { status: foregroundStatus } =
-        await Location.requestForegroundPermissionsAsync()
-     // const { status: backgroundStatus } =
-       // await Location.requestBackgroundPermissionsAsync()
-      if (foregroundStatus !== 'granted') {
-        setErrorMsg('Permission to access location was denied')
-        Alert.alert('Необходимо разрешение на доступ к местоположению')
-        return false
-      }
+      const requestPermissions = async () => {
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          console.log('Foreground location permission not granted');
+          return;
+        }
+
+        console.log('Permissions granted for both foreground and background location');
+      };
+
+      requestPermissions();
 
       let currentLocation = await Location.getCurrentPositionAsync({})
       setLocation({
@@ -29,7 +55,7 @@ export default function Map() {
         longitudeDelta: 0.001,
       })
 
-      startLocationTracking()
+      startForegroundLocationTracking(UID)
 
       // Генерация мок-данных для маршрута
       const generatedTrail = generateMockTrail(
