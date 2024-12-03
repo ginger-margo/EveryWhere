@@ -1,28 +1,25 @@
-import React from 'react'
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
-import FontIcon from 'react-native-vector-icons/FontAwesome'
-import { colors } from 'theme'
+import React from 'react';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import FontIcon from 'react-native-vector-icons/FontAwesome';
+import { colors } from 'theme';
 
 // stack navigators
-import { HomeNavigator, ProfileNavigator, ConnectNavigator } from '../stacks'
+import { HomeNavigator, ProfileNavigator } from '../stacks'; // Removed ConnectNavigator
+import { StatsComponent } from '../stacks/StatsComponent';
 
-const Tab = createBottomTabNavigator()
+const Tab = createBottomTabNavigator();
 
 const TabNavigator = () => {
   return (
     <Tab.Navigator
       options={{
         tabBarStyle: {
-          // backgroundColor: 'white',
-          // borderTopColor: 'gray',
-          // borderTopWidth: 1,
-          // paddingBottom: 5,
-          // paddingTop: 5,
-        }
+          // Customize if needed
+        },
       }}
       defaultScreenOptions={{
         headerShown: false,
-        headerTransparent: true
+        headerTransparent: true,
       }}
       screenOptions={({ route }) => ({
         headerShown: false,
@@ -38,25 +35,17 @@ const TabNavigator = () => {
         options={{
           tabBarLabel: 'Home',
           tabBarIcon: ({ color, size }) => (
-            <FontIcon
-              name="home"
-              color={color}
-              size={size}
-            />
+            <FontIcon name="home" color={color} size={size} />
           ),
         }}
       />
       <Tab.Screen
-        name="ConnectTab"
-        component={ConnectNavigator}
+        name="StatisticsTab" // Changed from ConnectTab
+        component={StatsComponent} // Changed to StatsComponent
         options={{
-          tabBarLabel: 'Connect',
+          tabBarLabel: 'Statistics', // Updated label
           tabBarIcon: ({ color, size }) => (
-            <FontIcon
-              name="share-alt"
-              color={color}
-              size={size}
-            />
+            <FontIcon name="bar-chart" color={color} size={size} /> // Icon for statistics
           ),
         }}
       />
@@ -66,16 +55,12 @@ const TabNavigator = () => {
         options={{
           tabBarLabel: 'Profile',
           tabBarIcon: ({ color, size }) => (
-            <FontIcon
-              name="user"
-              color={color}
-              size={size}
-            />
+            <FontIcon name="user" color={color} size={size} />
           ),
         }}
       />
     </Tab.Navigator>
-  )
-}
+  );
+};
 
-export default TabNavigator
+export default TabNavigator;

@@ -13,6 +13,7 @@ import { UserDataContext } from '../../../context/UserDataContext'
 import * as Device from 'expo-device'
 import { expoProjectId } from '../../../config'
 import { MapComponent } from '../stacks/MapComponent'
+import {StatsComponent} from '../stacks/StatsComponent'
 
 const Stack = createStackNavigator()
 
@@ -71,6 +72,7 @@ export default function RootStack() {
     >
       <Stack.Screen name="HomeRoot" component={TabNavigator} />
       <Stack.Screen name="MapComponent" component={MapComponent} />
+      <Stack.Screen name="StatsComponent" component={StatsComponent} />
       <Stack.Group
         screenOptions={{
           presentation: 'modal',

@@ -1,6 +1,6 @@
 import * as Location from 'expo-location';
-import { setDoc, doc, collection, addDoc } from 'firebase/firestore';
-import { firestore } from '../../firebase/config'
+// import { setDoc, doc, collection, addDoc } from 'firebase/firestore';
+// import { firestore } from '../../firebase/config';
 
 let locationSubscription;
 
@@ -19,26 +19,27 @@ export const startForegroundLocationTracking = async (uid) => {
     async (location) => {
       console.log('Current location:', location);
 
-      try {
-        const data = {
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-          timestamp: location.timestamp,
-          accuracy: location.coords.accuracy,
-          altitude: location.coords.altitude,
-          altitudeAccuracy: location.coords.altitudeAccuracy,
-          heading: location.coords.heading,
-          speed: location.coords.speed,
-        };
+      const data = {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        timestamp: location.timestamp,
+        accuracy: location.coords.accuracy,
+        altitude: location.coords.altitude,
+        altitudeAccuracy: location.coords.altitudeAccuracy,
+        heading: location.coords.heading,
+        speed: location.coords.speed,
+      };
 
-        // Записываем каждую запись в подколлекцию `locations` с уникальным идентификатором (например, по метке времени)
+      // Commented out Firebase save logic
+      /*
+      try {
         const locationsRef = collection(firestore, 'coords', uid, 'locations');
         await addDoc(locationsRef, data);
         console.log('Location saved in Firestore', new Date(location.timestamp).toLocaleString());
       } catch (error) {
         console.error('Error saving location in Firestore:', error);
       }
-
+      */
     }
   );
 };
