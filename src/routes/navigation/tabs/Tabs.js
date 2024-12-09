@@ -4,8 +4,8 @@ import FontIcon from 'react-native-vector-icons/FontAwesome';
 import { colors } from 'theme';
 
 // stack navigators
-import { HomeNavigator, ProfileNavigator } from '../stacks'; // Removed ConnectNavigator
-import { StatsComponent } from '../stacks/StatsComponent';
+import { HomeNavigator, ProfileNavigator } from '../stacks';
+import { StatsNavigator } from '../stacks/StatsNavigator';
 
 const Tab = createBottomTabNavigator();
 
@@ -41,7 +41,7 @@ const TabNavigator = () => {
       />
       <Tab.Screen
         name="StatisticsTab" // Changed from ConnectTab
-        component={StatsComponent} // Changed to StatsComponent
+        component={StatsNavigator} 
         options={{
           tabBarLabel: 'Statistics', // Updated label
           tabBarIcon: ({ color, size }) => (

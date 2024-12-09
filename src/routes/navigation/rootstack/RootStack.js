@@ -5,15 +5,14 @@ import {
   TransitionPresets,
 } from '@react-navigation/stack'
 import TabNavigator from '../tabs/Tabs'
-import { ModalStacks } from '../stacks/ModalStacks/ModalStacks'
 import * as Notifications from 'expo-notifications'
 import { firestore } from '../../../firebase/config'
 import { setDoc, doc } from 'firebase/firestore'
 import { UserDataContext } from '../../../context/UserDataContext'
 import * as Device from 'expo-device'
 import { expoProjectId } from '../../../config'
-import { MapComponent } from '../stacks/MapComponent'
-import {StatsComponent} from '../stacks/StatsComponent'
+import { MapNavigator } from '../stacks/MapNavigator'
+import {StatsNavigator} from '../stacks/StatsNavigator'
 
 const Stack = createStackNavigator()
 
@@ -71,20 +70,8 @@ export default function RootStack() {
       }}
     >
       <Stack.Screen name="HomeRoot" component={TabNavigator} />
-      <Stack.Screen name="MapComponent" component={MapComponent} />
-      <Stack.Screen name="StatsComponent" component={StatsComponent} />
-      <Stack.Group
-        screenOptions={{
-          presentation: 'modal',
-          headerShown: false,
-          gestureEnabled: true,
-          cardOverlayEnabled: true,
-          ...TransitionPresets.ModalPresentationIOS,
-          gestureEnabled: isIos,
-        }}
-      >
-        <Stack.Screen name="ModalStacks" component={ModalStacks} />
-      </Stack.Group>
+      <Stack.Screen name="MapNavigator" component={MapNavigator} />
+      <Stack.Screen name="StatsNavigator" component={StatsNavigator} />
     </Stack.Navigator>
   )
 }

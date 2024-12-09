@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Text, View, StyleSheet, ScrollView } from 'react-native';
-import ScreenTemplate from '../../../components/ScreenTemplate';
-import { colors, fontSize } from '../../../theme';
-import { mockTravelPoints } from '../../../data/mockTravelData';
+import ScreenTemplate from '../../components/ScreenTemplate';
+import { colors, fontSize } from '../../theme';
+import { mockTravelPoints } from '../../data/mockTravelData';
 
-export function StatsComponent() {
+export default function Stats() {
   const [travelStats, setTravelStats] = useState(null);
 
   useEffect(() => {
