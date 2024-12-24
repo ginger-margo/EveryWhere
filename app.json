@@ -27,7 +27,11 @@
       "bundleIdentifier": "reactnative.expo.firebase.boilerplate",
       "buildNumber": "1",
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "Use the photo library to change your avatar."
+        "NSPhotoLibraryUsageDescription": "Use the photo library to change your avatar.",
+        "UIBackgroundModes": ["location", "fetch", "remote-notification"],
+        "NSLocationWhenInUseUsageDescription": "We need your location to track your route while the app is in use.",
+        "NSLocationAlwaysUsageDescription": "We need your location to track your route even when the app is in the background.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "We need your location to track your route both when the app is in use and in the background."
       },
       "userInterfaceStyle": "automatic"
     },
@@ -37,7 +41,10 @@
       "userInterfaceStyle": "automatic",
       "permissions": [
         "VIBRATE",
-        "CAMERA"
+        "CAMERA",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION"
       ]
     },
     "packagerOpts": {

@@ -1,73 +1,43 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Alert } from 'react-native';
-import MapView, { Marker, Polygon } from 'react-native-maps';
-import * as Location from 'expo-location';
+import React, { useState, useEffect } from 'react'
+import { StyleSheet, View } from 'react-native'
+import MapView, { Marker, Polyline } from 'react-native-maps'
+import * as Location from 'expo-location'
+import { startForegroundLocationTracking } from './locationTracker'
+import { UID } from './constants'
+import { mockTravelPoints } from '../../data/mockTravelData'; // Подключение MockTravelData
 
 export default function Map() {
-  const [location, setLocation] = useState(null);
-  const [errorMsg, setErrorMsg] = useState(null);
-  let locationSubscription = null;
+  const [location, setLocation] = useState(null)
+  const [trail, setTrail] = useState([])
 
   useEffect(() => {
-    let subscription;
+    // Инициализация мок-данных маршрута
+    setTrail(mockTravelPoints);
 
     (async () => {
-      // Запрос разрешений на использование геолокации
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setErrorMsg('Permission to access location was denied');
-        Alert.alert('Error', 'Permission to access location was denied');
-        return;
-      }
+      const requestPermissions = async () => {
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          console.log('Foreground location permission not granted');
+          return;
+        }
 
-      // Получение текущего местоположения
-      let currentLocation = await Location.getCurrentPositionAsync({});
+        console.log('Permissions granted for both foreground and background location');
+      };
+
+      requestPermissions();
+
+      let currentLocation = await Location.getCurrentPositionAsync({})
       setLocation({
         latitude: currentLocation.coords.latitude,
         longitude: currentLocation.coords.longitude,
-        latitudeDelta: 0.0922,
-        longitudeDelta: 0.0421,
-      });
+        latitudeDelta: 0.001, // Сильный зум
+        longitudeDelta: 0.001,
+      })
 
-      // Отслеживание местоположения в реальном времени
-      subscription = await Location.watchPositionAsync(
-        {
-          accuracy: Location.Accuracy.High,
-          timeInterval: 5000, // Обновление каждые 5 секунд
-          distanceInterval: 10, // Обновление при изменении позиции на 10 метров
-        },
-        (newLocation) => {
-          setLocation({
-            latitude: newLocation.coords.latitude,
-            longitude: newLocation.coords.longitude,
-            latitudeDelta: 0.0922,
-            longitudeDelta: 0.0421,
-          });
-        }
-      );
-    })();
-
-    // Очистка подписки на изменения местоположения при размонтировании компонента
-    return () => {
-      if (subscription) {
-        subscription.remove();
-      }
-    };
-  }, []);
-
-  // Предопределенные метки на карте
-  const markers = [
-    { id: 1, latitude: 37.78825, longitude: -122.4324, title: 'Location 1' },
-    { id: 2, latitude: 37.75825, longitude: -122.4524, title: 'Location 2' },
-  ];
-
-  const polygonCoords = [
-    { latitude: 53.349805, longitude: -6.26031 }, // Центральная часть Дублина
-    { latitude: 53.355, longitude: -6.245 }, // Северо-восточная часть
-    { latitude: 53.345, longitude: -6.270 }, // Южная часть
-    { latitude: 53.350, longitude: -6.280 }, // Западная часть
-    { latitude: 53.355, longitude: -6.265 }, // Северо-западная часть
-  ];
+      startForegroundLocationTracking(UID)
+    })()
+  }, [])
 
   return (
     <View style={styles.container}>
@@ -76,34 +46,19 @@ export default function Map() {
           style={styles.map}
           initialRegion={location}
           showsUserLocation={true}
-          followsUserLocation={true}
         >
-          {/* Маркер текущего местоположения пользователя */}
-          <Marker coordinate={location} title="You are here" />
+          <Marker coordinate={location} title="You are here now" />
 
-          {/* Дополнительные маркеры */}
-          {markers.map((marker) => (
-            <Marker
-              key={marker.id}
-              coordinate={{
-                latitude: marker.latitude,
-                longitude: marker.longitude,
-              }}
-              title={marker.title}
-            />
-          ))}
-
-          {/* Полигон для закрашивания области */}
-          <Polygon
-            coordinates={polygonCoords}
-            fillColor="rgba(0, 200, 0, 0.3)" // Заливка региона с прозрачностью
-            strokeColor="rgba(0, 0, 0, 0.5)" // Цвет границы полигона
-            strokeWidth={2} // Ширина границы
+          {/* Линия для отображения маршрута */}
+          <Polyline
+            coordinates={trail}
+            strokeColor="rgba(0, 200, 0, 0.5)"
+            strokeWidth={20}
           />
         </MapView>
       ) : null}
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -116,4 +71,33 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-});
+})
+
+/* Код, связанный с Firestore, закомментирован
+import { getFirestore, collection, getDocs } from 'firebase/firestore';
+import { firestore } from '../../firebase/config';
+import {transformLocationsForRadius} from './locationUtils';
+
+// useEffect(() => {
+//   // Loading location data from Firestore
+//   const fetchLocationData = async () => {
+//     const uid = UID;
+//     try {
+//       const locationsRef = collection(firestore, `coords/${uid}/locations`);
+//       const locationSnapshot = await getDocs(locationsRef);
+
+//       const locationData = locationSnapshot.docs.map((doc) => doc.data());
+//       setLocations(locationData);
+//     } catch (error) {
+//       console.error('Error fetching location data:', error);
+//     }
+
+//     console.log('Locations fetched:', locations);
+//     const adjustedLocations = transformLocationsForRadius(locations, 1000);
+//     console.log(adjustedLocations[0]);
+//     setTrail(adjustedLocations);
+//   };
+
+//   fetchLocationData();
+// }, []);
+*/

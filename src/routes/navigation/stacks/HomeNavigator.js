@@ -6,7 +6,6 @@ import { lightProps, darkProps } from './navigationProps/navigationProps'
 import HeaderStyle from './headerComponents/HeaderStyle'
 
 import Home from '../../../scenes/home'
-import Detail from '../../../scenes/detail'
 
 const Stack = createStackNavigator()
 
@@ -30,14 +29,6 @@ export const HomeNavigator = () => {
               options={({ navigation }) => ({
                 headerBackground: scheme === 'dark' ? null: () => <HeaderStyle />,
               })}
-            />
-            <Stack.Screen
-              name="Detail"
-              component={Detail}
-              options={{ 
-                title: ctx.title,
-                headerBackground: scheme === 'dark' ? null: () => <HeaderStyle />,
-              }}
             />
           </Stack.Navigator>
       )}
