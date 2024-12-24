@@ -5,6 +5,7 @@ import * as Location from 'expo-location'
 import { startForegroundLocationTracking } from './locationTracker'
 import { UID } from './constants'
 import { mockTravelPoints } from '../../data/mockTravelData'; // Подключение MockTravelData
+import { startBackgroundLocationTracking } from './locationUtils';
 
 export default function Map() {
   const [location, setLocation] = useState(null)
@@ -13,6 +14,7 @@ export default function Map() {
   useEffect(() => {
     // Инициализация мок-данных маршрута
     setTrail(mockTravelPoints);
+    startBackgroundLocationTracking();
 
     (async () => {
       const requestPermissions = async () => {
