@@ -6,6 +6,7 @@ import { startForegroundLocationTracking } from './locationTracker'
 import { UID } from './constants'
 import { mockTravelPoints } from '../../data/mockTravelData'; // Подключение MockTravelData
 import { startBackgroundLocationTracking } from './locationUtils';
+import LocationTrackingComponent from './LocationTrackingComponent'
 
 export default function Map() {
   const [location, setLocation] = useState(null)
@@ -43,6 +44,7 @@ export default function Map() {
 
   return (
     <View style={styles.container}>
+      <LocationTrackingComponent/>
       {location ? (
         <MapView
           style={styles.map}

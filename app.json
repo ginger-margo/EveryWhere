@@ -24,11 +24,11 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "reactnative.expo.firebase.boilerplate",
+      "bundleIdentifier": "com.margo.everywhere",
       "buildNumber": "1",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Use the photo library to change your avatar.",
-        "UIBackgroundModes": ["location", "fetch", "remote-notification"],
+        "UIBackgroundModes": ["location", "fetch"],
         "NSLocationWhenInUseUsageDescription": "We need your location to track your route while the app is in use.",
         "NSLocationAlwaysUsageDescription": "We need your location to track your route even when the app is in the background.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "We need your location to track your route both when the app is in use and in the background."
@@ -36,7 +36,7 @@
       "userInterfaceStyle": "automatic"
     },
     "android": {
-      "package": "reactnative.expo.firebase.boilerplate",
+      "package": "com.margo.everywhere",
       "versionCode": 1,
       "userInterfaceStyle": "automatic",
       "permissions": [
