@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "MyExpoDummy",
+    "slug": "MyExpoDummy",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.polina.shnaider.MyExpoDummy",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "We use your location to track your route.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "We need location access in the background to track your route, even when the app is closed."
+      },
+      "config": {
+        "plist": {
+          "UIBackgroundModes": [
+            "location",
+            "fetch"
+          ]
+        }
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.polina.shnaider.MyExpoDummy"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}
