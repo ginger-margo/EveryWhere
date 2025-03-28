@@ -14,10 +14,8 @@ const firebaseConfig = {
 };
 
 
-// ✅ Ensure Firebase is initialized before exporting anything
 const app = initializeApp(firebaseConfig);
 
-// ✅ Make sure `auth` is properly initialized
 const auth = getAuth(app);
 const firestore = getFirestore(app);
 const storage = getStorage(app);

@@ -1,5 +1,9 @@
 import * as TaskManager from 'expo-task-manager';
 import * as Location from 'expo-location';
+import { collection, getDocs } from "firebase/firestore";
+import { firestore } from "../firebase/config";
+import { GOOGLE_PLACES_API_KEY } from "@env";
+
 
 const LOCATION_TASK_NAME = "background-location-task";
 
@@ -60,5 +64,90 @@ export const transformLocationsForRadius = (locations, radius) => {
       maxLongitude: adjusted.maxLongitude, // Правая граница
     };
   });
+};
+
+export const returnGeocodedLocation = async ({latitude, longitude}) => {
+      const result = await Location.reverseGeocodeAsync({
+        latitude,
+        longitude,
+      });
+      console.log(result, "returnGeocodedLocation");
+      return result;
+}
+
+const reverseGeocode = async (latitude, longitude) => {
+  const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${GOOGLE_PLACES_API_KEY}`;
+
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+    if (data.results.length > 0) {
+      return data.results[0]; // Первый результат (самый точный)
+    }
+    return null;
+  } catch (error) {
+    console.error("Error in reverse geocoding:", error);
+    return null;
+  }
+};
+
+
+// Get geocoded most visited places
+export const fetchAndGeocodeMostVisitedPlaces = async (uid) => {
+  if (!uid) {
+    console.error("UID is required.");
+    return [];
+  }
+
+  try {
+    // Reference to the 'mostVisitedPlaces' subcollection
+    const mostVisitedRef = collection(firestore, `locations/${uid}/mostVisitedPlaces`);
+    const querySnapshot = await getDocs(mostVisitedRef);
+
+    if (querySnapshot.empty) {
+      console.log("No most visited places found.");
+      return [];
+    }
+
+    // Iterate over each location and geocode it
+    const geocodedLocations = [];
+    for (const doc of querySnapshot.docs) {
+      const locationData = doc.data();
+      if (locationData.latitude && locationData.longitude) {
+        const geocoded = await returnGeocodedLocation({
+          latitude: locationData.latitude,
+          longitude: locationData.longitude,
+        });
+        const placeType = await reverseGeocode(locationData.latitude, locationData.longitude);
+        console.log(placeType);
+        geocodedLocations.push({ ...locationData, geocoded });
+      }
+    }
+
+    return geocodedLocations;
+  } catch (error) {
+    console.error("Error fetching and geocoding most visited places:", error);
+    return [];
+  }
+};
+
+//Get type for most visited places
+const getLocationTypeFromGoogle = async (latitude, longitude) => {
+  const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=70&key=${GOOGLE_PLACES_API_KEY}`;
+  console.log(url);
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data.results.length > 0) {
+      const placeType = data.results[0].types; // Example: ["restaurant", "food", "point_of_interest"]
+      return placeType;
+    }
+
+    return ["unknown"];
+  } catch (error) {
+    console.error("Error fetching location type:", error);
+    return ["unknown"];
+  }
 };
 

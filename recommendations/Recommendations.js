@@ -14,12 +14,13 @@ import * as Location from "expo-location";
 import DropDownPicker from "react-native-dropdown-picker";
 import { getNearbyPlaces } from "./utils";
 import { GOOGLE_PLACES_API_KEY } from "@env";
+import { useRoute } from "@react-navigation/native";
 
 // Получаем ширину экрана
 const { width } = Dimensions.get("window");
 
 // Карточки будут 2 в ряд, 3:4 (75% от ширины)
-const CARD_WIDTH = (width / 2) - 15;
+const CARD_WIDTH = width / 2 - 15;
 const CARD_HEIGHT = CARD_WIDTH * 1.33;
 
 export default function RecommendationsScreen() {
@@ -27,7 +28,10 @@ export default function RecommendationsScreen() {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [loading, setLoading] = useState(false);
   const [location, setLocation] = useState(null);
+  const route = useRoute();
+  const { location: placeLocation, type = "current" } = route.params;
 
+  console.log("This is nmy log", placeLocation, type);
   // Dropdown state
   const [open, setOpen] = useState(false);
   const [categories, setCategories] = useState([
@@ -41,19 +45,38 @@ export default function RecommendationsScreen() {
 
   useEffect(() => {
     (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        alert("Permission to access location was denied");
-        return;
-      }
+      if (type === "current") {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted") {
+          alert("Permission to access location was denied");
+          return;
+        }
 
-      const currentLocation = await Location.getCurrentPositionAsync({});
-      setLocation({
-        latitude: currentLocation.coords.latitude,
-        longitude: currentLocation.coords.longitude,
-      });
+        const currentLocation = await Location.getCurrentPositionAsync({});
+        setLocation({
+          latitude: currentLocation.coords.latitude,
+          longitude: currentLocation.coords.longitude,
+        });
+      } else {
+        // Use passed location (home or work)
+        setLocation(placeLocation);
+      }
     })();
   }, []);
+
+  useEffect(() => {
+    if (placeLocation) {
+      setLocation(placeLocation); // если передано вручную
+    }
+  
+    // Установим умолчания
+    if (type === "home") {
+      setSelectedCategory("park");
+    } else if (type === "work") {
+      setSelectedCategory("cafe");
+    }
+  }, [type, placeLocation]);
+  
 
   const fetchPlaces = async () => {
     if (!selectedCategory) {
@@ -66,7 +89,11 @@ export default function RecommendationsScreen() {
     }
 
     setLoading(true);
-    const results = await getNearbyPlaces(location.latitude, location.longitude, selectedCategory);
+    const results = await getNearbyPlaces(
+      location.latitude,
+      location.longitude,
+      selectedCategory
+    );
     setPlaces(results);
     setLoading(false);
   };
@@ -80,9 +107,15 @@ export default function RecommendationsScreen() {
       <View style={styles.card}>
         <Image source={{ uri: photoUrl }} style={styles.image} />
         <View style={styles.details}>
-          <Text style={styles.name} numberOfLines={2}>{item.name}</Text>
-          <Text style={styles.address} numberOfLines={1}>{item.vicinity}</Text>
-          <Text style={styles.rating}>⭐ {item.rating || "N/A"} | 💰 {item.price_level ?? "N/A"}</Text>
+          <Text style={styles.name} numberOfLines={2}>
+            {item.name}
+          </Text>
+          <Text style={styles.address} numberOfLines={1}>
+            {item.vicinity}
+          </Text>
+          <Text style={styles.rating}>
+            ⭐ {item.rating || "N/A"} | 💰 {item.price_level ?? "N/A"}
+          </Text>
           <Text style={styles.status}>
             {item.opening_hours?.open_now ? "🟢 Open Now" : "🔴 Closed"}
           </Text>
@@ -92,10 +125,25 @@ export default function RecommendationsScreen() {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={{ flex: 1 }}
+    >
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.heading}>Choose category to get nearby recommendations</Text>
+          {type && (
+            <Text style={styles.locationInfo}>
+              🔍 Showing places near:{" "}
+              {type === "home"
+                ? "🏠 Home"
+                : type === "work"
+                ? "💻 Work"
+                : "📍 Current Location"}
+            </Text>
+          )}
+          <Text style={styles.heading}>
+            Choose category to get nearby recommendations
+          </Text>
 
           {/* Dropdown Selector */}
           <DropDownPicker
@@ -121,7 +169,9 @@ export default function RecommendationsScreen() {
         {loading ? (
           <Text style={styles.loadingText}>Searching...</Text>
         ) : places.length === 0 ? (
-          <Text style={styles.noResultsText}>No places found. Choose a category and click Find.</Text>
+          <Text style={styles.noResultsText}>
+            No places found. Choose a category and click Find.
+          </Text>
         ) : (
           <FlatList
             data={places}
@@ -237,4 +287,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "bold",
   },
+  locationInfo: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#007AFF", 
+    marginBottom: 8,
+    textAlign: "center",
+  },  
 });
