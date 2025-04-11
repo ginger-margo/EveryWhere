@@ -9,7 +9,7 @@ export const addLocation = async (latitude, longitude, timestamp) => {
     return;
   }
 
-  const uid = user.uid; // ✅ Get actual user UID
+  const uid = user.uid; 
 
   try {
     const data = {
@@ -23,10 +23,8 @@ export const addLocation = async (latitude, longitude, timestamp) => {
       speed: 0,
     };
 
-    // ✅ Correct Firestore path for subcollection
     const locationsRef = collection(firestore, `coords/${uid}/locations`);
     await addDoc(locationsRef, data);
-    console.log("Location saved in Firestore", new Date(timestamp).toLocaleString());
   } catch (error) {
     console.error("Error saving location in Firestore:", error);
   }

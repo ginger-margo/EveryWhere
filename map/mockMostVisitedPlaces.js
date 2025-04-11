@@ -84,8 +84,8 @@ export const seedMostVisitedPlaces = async (uid) => {
 
     await Promise.all(writePromises);
 
-    console.log("✅ Successfully seeded mostVisitedPlaces in Firestore.");
+    console.log("Successfully seeded mostVisitedPlaces in Firestore.");
   } catch (error) {
-    console.error("🔥 Error writing mostVisitedPlaces to Firestore:", error);
+    console.error("Error writing mostVisitedPlaces to Firestore:", error);
   }
 };

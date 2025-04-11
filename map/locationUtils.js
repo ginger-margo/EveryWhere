@@ -3,6 +3,8 @@ import * as Location from 'expo-location';
 import { collection, getDocs } from "firebase/firestore";
 import { firestore } from "../firebase/config";
 import { GOOGLE_PLACES_API_KEY } from "@env";
+import moment from "moment";
+import { fetchLocationPoints } from "../dataLayer";
 
 
 const LOCATION_TASK_NAME = "background-location-task";
@@ -14,8 +16,6 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
   }
   if (data) {
     const { locations } = data;
-    console.log("Received new locations:", locations);
-    // Send locations to your backend or store them locally
   }
 });
 
@@ -71,7 +71,6 @@ export const returnGeocodedLocation = async ({latitude, longitude}) => {
         latitude,
         longitude,
       });
-      console.log(result, "returnGeocodedLocation");
       return result;
 }
 
@@ -119,7 +118,6 @@ export const fetchAndGeocodeMostVisitedPlaces = async (uid) => {
           longitude: locationData.longitude,
         });
         const placeType = await reverseGeocode(locationData.latitude, locationData.longitude);
-        console.log(placeType);
         geocodedLocations.push({ ...locationData, geocoded });
       }
     }
@@ -134,7 +132,6 @@ export const fetchAndGeocodeMostVisitedPlaces = async (uid) => {
 //Get type for most visited places
 const getLocationTypeFromGoogle = async (latitude, longitude) => {
   const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=70&key=${GOOGLE_PLACES_API_KEY}`;
-  console.log(url);
   try {
     const response = await fetch(url);
     const data = await response.json();
@@ -150,4 +147,83 @@ const getLocationTypeFromGoogle = async (latitude, longitude) => {
     return ["unknown"];
   }
 };
+
+// Группировка подряд идущих точек по местоположению (округлено до 3 знаков)
+function groupPointsByLocation(points) {
+  const grouped = [];
+  let currentGroup = [];
+
+  for (let i = 0; i < points.length; i++) {
+    const point = points[i];
+    const lat = point.latitude.toFixed(3);
+    const lon = point.longitude.toFixed(3);
+    const locationKey = `${lat},${lon}`;
+
+    if (
+      currentGroup.length === 0 ||
+      `${currentGroup[currentGroup.length - 1].latitude.toFixed(3)},${currentGroup[currentGroup.length - 1].longitude.toFixed(3)}` === locationKey
+    ) {
+      currentGroup.push(point);
+    } else {
+      grouped.push(currentGroup);
+      currentGroup = [point];
+    }
+  }
+
+  if (currentGroup.length > 0) {
+    grouped.push(currentGroup);
+  }
+
+  return grouped;
+}
+
+// Фильтрация только тех групп, где находились ≥ 15 минут
+function filterValidVisits(grouped) {
+  const validVisits = [];
+
+  grouped.forEach(group => {
+    const duration = group[group.length - 1].timestamp - group[0].timestamp;
+
+    if (duration >= 15 * 60 * 1000) {
+      const day = moment
+        .unix(Math.floor(group[0].timestamp / 1000))
+        .format("ddd");
+
+      const locationKey = `${group[0].latitude.toFixed(3)},${group[0].longitude.toFixed(3)}`;
+      validVisits.push({ day, locationKey });
+    }
+  });
+
+  return validVisits;
+}
+
+// Подсчёт уникальных мест по дням недели
+function countVisitsPerDay(validVisits) {
+  const weekData = {
+    Mon: new Set(),
+    Tue: new Set(),
+    Wed: new Set(),
+    Thu: new Set(),
+    Fri: new Set(),
+    Sat: new Set(),
+    Sun: new Set(),
+  };
+
+  validVisits.forEach(visit => {
+    weekData[visit.day].add(visit.locationKey);
+  });
+
+  const dayOrder = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  return dayOrder.map(day => weekData[day].size);
+}
+
+// Финальная функция для использования
+export async function getWeeklyDistances(userId) {
+  const points = await fetchLocationPoints(userId);
+  const grouped = groupPointsByLocation(points);
+  const validVisits = filterValidVisits(grouped);
+  const weeklyDistances = countVisitsPerDay(validVisits);
+  return weeklyDistances;
+}
+
 

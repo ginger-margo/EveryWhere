@@ -21,18 +21,13 @@ let arrivalTime = null;
 const updateMostVisitedPlaces = async (latitude, longitude) => {
   const user = auth.currentUser;
   if (!user) return;
-
-  console.log("LOG: updating most visited places");
   
   const uid = user.uid;
-  console.log(uid, "This is UID");
-  console.log("Firestore instance:", firestore);
 
   // Reference to the 'mostVisitedPlaces' subcollection under the 'locations' document
   const mostVisitedRef = collection(firestore, `locations/${uid}/mostVisitedPlaces`);
   
   try {
-    console.log("Checking Firestore subcollection...");
     const querySnapshot = await getDocs(mostVisitedRef);
     const places = [];
     querySnapshot.forEach((doc) => {
@@ -162,7 +157,6 @@ export const startForegroundLocationTracking = async (uid) => {
       try {
         const locationsRef = collection(firestore, `locations/${uid}/locationData`);
         await addDoc(locationsRef, data); // Generates a unique document ID automatically
-        console.log("Location saved in Firestore:", new Date(data.timestamp).toLocaleString());
       
         if (!currentLocation || calculateDistance(currentLocation.latitude, currentLocation.longitude, data.latitude, data.longitude) > 0.1) {
           // User moved to a new location

@@ -42,7 +42,6 @@ export default function Map() {
       fetchAndGeocodeMostVisitedPlaces(userId);
     };
     fetchHomeAndWork();
-    //seedMostVisitedPlaces(userId);
   }, [userId]);
 
   useEffect(() => {

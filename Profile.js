@@ -6,8 +6,15 @@ import { collection, query, where, getDocs, doc } from "firebase/firestore";
 import useLocationTracker from "./map/useLocationTracker";
 import * as turf from "@turf/turf"; // Turf.js for geospatial calculations
 import * as Location from "expo-location"; // Location services
-import {returnGeocodedLocation} from "./map/locationUtils";
-import {getMostVisitedPlaces} from "./map/locationTracker";
+import {
+  returnGeocodedLocation,
+  getWeeklyDistances,
+} from "./map/locationUtils";
+import { getMostVisitedPlaces } from "./map/locationTracker";
+import { fetchLocationPoints } from "./dataLayer";
+import { ScrollView } from "react-native";
+import moment from "moment";
+import { PanGestureHandler } from "react-native-gesture-handler";
 
 const screenWidth = Dimensions.get("window").width;
 const screenHeight = Dimensions.get("window").height;
@@ -31,19 +38,71 @@ const calculateShadedArea = (trail, trailWidthInMeters = 10) => {
 };
 
 export default function ProfileScreen() {
+  const [weekOffset, setWeekOffset] = useState(0);
   const [weeklyDistances, setWeeklyDistances] = useState([0, 0, 0, 0, 0, 0, 0]);
   const [trail, setTrail] = useState([]);
-  const [mostVisitedPlace, setMostVisitedPlace] = useState("Fetching location...");
+  const [mostVisitedPlace, setMostVisitedPlace] = useState(
+    "Fetching location..."
+  );
 
   const cityArea = 117.8; // TODO - get current city
   const worldLandArea = 148940000; // World's land area in km²
+
+  useEffect(() => {
+    const fetchWeeklyDistances = async () => {
+      const uid = auth.currentUser?.uid;
+      if (!uid) return;
+
+      const allPoints = await fetchLocationPoints(uid);
+
+      const start = moment()
+        .startOf("isoWeek")
+        .add(weekOffset, "weeks")
+        .valueOf();
+      const end = moment().endOf("isoWeek").add(weekOffset, "weeks").valueOf();
+
+      const filtered = allPoints.filter(
+        (point) => point.timestamp >= start && point.timestamp <= end
+      );
+
+      const grouped = {
+        Mon: new Set(),
+        Tue: new Set(),
+        Wed: new Set(),
+        Thu: new Set(),
+        Fri: new Set(),
+        Sat: new Set(),
+        Sun: new Set(),
+      };
+
+      filtered.forEach((point) => {
+        const day = moment(point.timestamp).format("ddd");
+        const key = `${point.latitude.toFixed(3)},${point.longitude.toFixed(
+          3
+        )}`;
+        if (grouped[day]) grouped[day].add(key);
+      });
+
+      const orderedDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+      const distances = orderedDays.map((day) => grouped[day].size);
+
+      setWeeklyDistances(distances);
+    };
+
+    fetchWeeklyDistances();
+  }, [weekOffset]);
 
   useEffect(() => {
     if (!auth.currentUser) return;
 
     const fetchLocationData = async () => {
       try {
-        const locationsRef = collection(firestore, "locations", auth.currentUser.uid, "locationData");
+        const locationsRef = collection(
+          firestore,
+          "locations",
+          auth.currentUser.uid,
+          "locationData"
+        );
         const locationSnapshot = await getDocs(locationsRef);
         const locationData = locationSnapshot.docs.map((doc) => doc.data());
 
@@ -56,24 +115,31 @@ export default function ProfileScreen() {
     fetchLocationData();
   }, []);
 
-  const locationIcons = {"gym": "🏋️‍♀️", "home": "🏠", "work": "🎒", "groceries": "🛒", "bar": "🍻", "cafe": "☕️"};
-
+  const locationIcons = {
+    gym: "🏋️‍♀️",
+    home: "🏠",
+    work: "🎒",
+    groceries: "🛒",
+    bar: "🍻",
+    cafe: "☕️",
+  };
 
   useEffect(() => {
     (async () => {
-      const mostVisitedPlaces = await getMostVisitedPlaces(auth.currentUser.uid);
-      console.log("Hello, these are the correct most visited places", mostVisitedPlaces);
-     let location = mostVisitedPlaces.sort((a, b)=> {
-        return b.timeSpent - a.timeSpent;
-      }).find((place) => {
-        return place.type != "home" && place.type != "work";
-      }) || mostVisitedPlace[0];
+      const mostVisitedPlaces = await getMostVisitedPlaces(
+        auth.currentUser.uid
+      );
+      let location =
+        mostVisitedPlaces
+          .sort((a, b) => {
+            return b.timeSpent - a.timeSpent;
+          })
+          .find((place) => {
+            return place.type != "home" && place.type != "work";
+          }) || mostVisitedPlace[0];
       let type = location.type;
-      console.log(type, "Thi is the type");
-      console.log(location, "this is the location");
       let icon = locationIcons[type] || "🏆";
       const result = await returnGeocodedLocation(location);
-      console.log(result, "This is the most visited place ");
       setMostVisitedPlace(icon + " " + result[0]?.name || "Unknown Place");
     })();
   }, []);
@@ -83,53 +149,168 @@ export default function ProfileScreen() {
   const cityExplored = (shadedArea / cityArea) * 100;
   const worldExplored = (shadedArea / worldLandArea) * 100;
 
+  // Finding this week
+  const startOfWeek = moment().startOf("isoWeek").add(weekOffset, "weeks");
+  const endOfWeek = moment().endOf("isoWeek").add(weekOffset, "weeks");
+  const weekRangeText = `${startOfWeek.format("D.MM")} - ${endOfWeek.format(
+    "D.MM"
+  )}`;
+
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.header}>Statistics</Text>
 
-      <View style={styles.graphContainer}>
-        <Text style={styles.sectionTitle}>Distance Walked</Text>
-        <LineChart
-          data={{
-            labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-            datasets: [{ data: weeklyDistances }],
-          }}
-          width={screenWidth * 0.9}
-          height={screenHeight * 0.3}
-          yAxisSuffix=" km"
-          chartConfig={{
-            backgroundColor: "#FFF",
-            backgroundGradientFrom: "#F7F7F7",
-            backgroundGradientTo: "#E6E6E6",
-            decimalPlaces: 1,
-            color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-          }}
-          style={styles.chartStyle}
-        />
-      </View>
+      <Text style={styles.sectionTitle}>
+        Your Week <Text style={styles.weekRange}>| {weekRangeText}</Text>
+      </Text>
+
+      <PanGestureHandler
+        onHandlerStateChange={({ nativeEvent }) => {
+          if (nativeEvent.state === 5) {
+            // 5 = END
+            if (nativeEvent.translationX > 50) {
+              setWeekOffset((prev) => prev - 1);
+            } else if (nativeEvent.translationX < -50) {
+              setWeekOffset((prev) => (prev < 0 ? prev + 1 : 0));
+            }
+          }
+        }}
+      >
+        <View style={styles.graphContainer}>
+          <LineChart
+            data={{
+              labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+              datasets: [{ data: weeklyDistances }],
+            }}
+            width={screenWidth * 0.9}
+            height={screenHeight * 0.3}
+            yAxisSuffix=" places"
+            chartConfig={{
+              backgroundColor: "#FFFFFF",
+              backgroundGradientFrom: "#FFFFFF",
+              backgroundGradientTo: "#FFFFFF",
+              decimalPlaces: 0,
+              color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+              propsForDots: {
+                r: "4",
+                strokeWidth: "2",
+                stroke: "#DA84C3",
+              },
+              propsForBackgroundLines: {
+                strokeDasharray: "",
+              },
+            }}
+            withDots={true}
+            withInnerLines={true}
+            withOuterLines={true}
+            fromZero={true}
+            style={styles.chartStyle}
+          />
+        </View>
+      </PanGestureHandler>
+
+      <Text style={styles.sectionTitle}>And this is you 👀</Text>
 
       <View style={styles.gridContainer}>
         <View style={styles.box}>
-          <Text style={styles.boxText}> {mostVisitedPlace || "No data"}</Text>
+          <Text style={[styles.boxLabel]}>Your top spot:</Text>
+          <Text style={[styles.boxText, { color: "#DA84C3" }]}>
+            {mostVisitedPlace || "No data"}
+          </Text>
         </View>
         <View style={styles.box}>
-          <Text style={styles.boxText}>🌍 {cityExplored.toFixed(2)}% of City Explored</Text>
+          <Text style={styles.boxText}>
+            🌍 {cityExplored.toFixed(2)}% of City Explored
+          </Text>
         </View>
         <View style={styles.box}>
-          <Text style={styles.boxText}>🗺️ {worldExplored.toFixed(3)}% of World Explored</Text>
+          <Text style={styles.boxText}>
+            🗺️ {worldExplored.toFixed(6)}% of World Explored
+          </Text>
         </View>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#FFF", marginTop: 60 },
-  header: { fontSize: 32, fontWeight: "bold", color: "#000", textAlign: "left", marginBottom: 20 },
-  graphContainer: { alignItems: "center", marginBottom: 20 },
-  sectionTitle: { fontSize: 18, fontWeight: "bold", color: "#000", marginBottom: 10 },
-  chartStyle: { borderRadius: 10 },
-  gridContainer: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginTop: 20 },
-  box: { width: "48%", height: screenHeight * 0.15, backgroundColor: "#F0F0F0", justifyContent: "center", alignItems: "center", marginBottom: 10, borderRadius: 10 },
-  boxText: { fontSize: 16, fontWeight: "bold", color: "#000", textAlign: "center" }
+  container: {
+    padding: 20,
+    backgroundColor: "#F5F3EB", // earthy tone
+    marginTop: 60,
+  },
+  header: {
+    fontSize: 32,
+    fontWeight: "bold",
+    color: "#3B3A36", // charcoal
+    textAlign: "left",
+    marginBottom: 20,
+  },
+  graphContainer: {
+    alignItems: "center",
+    marginBottom: 20,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#3B3A36",
+    marginBottom: 10,
+    textAlign: "left",
+    alignSelf: "flex-start",
+  },
+  chartStyle: {
+    borderRadius: 10,
+  },
+  gridContainer: {
+    flexDirection: "column",
+    justifyContent: "space-between",
+    marginTop: 20,
+  },
+  box: {
+    width: "98%",
+    padding: 25,
+    backgroundColor: "#FFFFFF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 15,
+    borderRadius: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  boxText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#3B3A36",
+    textAlign: "center",
+  },
+  weekHeader: {
+    width: "100%",
+    marginBottom: 12,
+    alignItems: "flex-start",
+  },
+
+  weekRange: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#A18A96", // мягкий серо-розовый оттенок
+    marginTop: 2,
+  },
+  boxLabel: {
+    fontSize: 14,
+    color: "#A18A96",
+    marginBottom: 5,
+    fontWeight: "500",
+    textAlign: "left",
+  },
 });

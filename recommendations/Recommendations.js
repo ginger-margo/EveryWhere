@@ -29,9 +29,8 @@ export default function RecommendationsScreen() {
   const [loading, setLoading] = useState(false);
   const [location, setLocation] = useState(null);
   const route = useRoute();
-  const { location: placeLocation, type = "current" } = route.params;
+  const { location: placeLocation, type = "current" } = route.params || {};
 
-  console.log("This is nmy log", placeLocation, type);
   // Dropdown state
   const [open, setOpen] = useState(false);
   const [categories, setCategories] = useState([

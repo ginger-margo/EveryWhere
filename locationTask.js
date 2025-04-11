@@ -12,8 +12,6 @@ TaskManager.defineTask(LOCATION_TASK_NAME, ({ data, error }) => {
   }
   if (data) {
     const { locations } = data;
-    console.log('Background locations:', locations);
-    // Do something with the locations array
   }
 });
 
