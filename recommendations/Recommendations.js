@@ -20,8 +20,8 @@ import { useRoute } from "@react-navigation/native";
 const { width } = Dimensions.get("window");
 
 // Карточки будут 2 в ряд, 3:4 (75% от ширины)
-const CARD_WIDTH = width / 2 - 15;
-const CARD_HEIGHT = CARD_WIDTH * 1.33;
+const CARD_WIDTH = width / 2.3;
+const CARD_HEIGHT = CARD_WIDTH * 1.6;
 
 export default function RecommendationsScreen() {
   const [places, setPlaces] = useState([]);
@@ -69,7 +69,7 @@ export default function RecommendationsScreen() {
     if (placeLocation) {
       setLocation(placeLocation); // если передано вручную
     }
-  
+
     // Установим умолчания
     if (type === "home") {
       setSelectedCategory("park");
@@ -79,7 +79,6 @@ export default function RecommendationsScreen() {
       setSelectedCategory(type);
     }
   }, [type, placeLocation]);
-  
 
   const fetchPlaces = async () => {
     if (!selectedCategory) {
@@ -100,7 +99,6 @@ export default function RecommendationsScreen() {
       groceries: "grocery_or_supermarket",
       bar: "bar",
     };
-    
 
     setLoading(true);
     const category = typeToCategoryMap[type] || selectedCategory || "bar";
@@ -109,7 +107,7 @@ export default function RecommendationsScreen() {
       location.longitude,
       category
     );
-    
+
     setPlaces(results);
     setLoading(false);
   };
@@ -123,10 +121,10 @@ export default function RecommendationsScreen() {
       <View style={styles.card}>
         <Image source={{ uri: photoUrl }} style={styles.image} />
         <View style={styles.details}>
-          <Text style={styles.name} numberOfLines={2}>
+          <Text style={styles.name} numberOfLines={2} ellipsizeMode="tail">
             {item.name}
           </Text>
-          <Text style={styles.address} numberOfLines={1}>
+          <Text style={styles.address} numberOfLines={1} ellipsizeMode="tail">
             {item.vicinity}
           </Text>
           <Text style={styles.rating}>
@@ -146,21 +144,26 @@ export default function RecommendationsScreen() {
       style={{ flex: 1 }}
     >
       <View style={styles.container}>
-        <View style={styles.header}>
-          {type && (
-            <Text style={styles.locationInfo}>
-              🔍 Showing places near:{" "}
+        <View style={styles.topSection}>
+          <Text style={styles.screenTitle}>Explore more</Text>
+          <Text style={styles.sectionTitle}>
+            Showing places near{" "}
+            <Text style={styles.weekRange}>
               {type === "home"
                 ? "🏠 Home"
                 : type === "work"
                 ? "💻 Work"
+                : type === "cafe"
+                ? "☕️ Cafe"
+                : type === "gym"
+                ? "🏋️ Gym"
+                : type === "bar"
+                ? "🍻 Bar"
                 : "📍 Current Location"}
             </Text>
-          )}
-          <Text style={styles.heading}>
-            Choose category to get nearby recommendations
           </Text>
-
+        </View>
+        <View style={styles.header}>
           {/* Dropdown Selector */}
           <DropDownPicker
             open={open}
@@ -206,20 +209,25 @@ export default function RecommendationsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F5F5",
-    padding: 10,
-    marginTop: 40,
+    backgroundColor: "#F5F3EB",
+    padding: 20,
+    marginTop: 60,
   },
   header: {
-    backgroundColor: "#FFF",
+    backgroundColor: "#FFFFFF",
     padding: 20,
-    borderRadius: 10,
+    borderRadius: 12,
     marginBottom: 10,
-    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   heading: {
     fontSize: 18,
     fontWeight: "bold",
+    color: "#3B3A36",
     textAlign: "center",
     marginBottom: 15,
   },
@@ -229,34 +237,35 @@ const styles = StyleSheet.create({
   },
   dropdown: {
     borderColor: "#CCC",
-    borderRadius: 5,
-    backgroundColor: "#FFF",
+    borderRadius: 10,
+    backgroundColor: "#FFFFFF",
   },
   dropdownBox: {
-    backgroundColor: "#FFF",
+    backgroundColor: "#FFFFFF",
     borderColor: "#CCC",
   },
   button: {
-    backgroundColor: "#007AFF",
-    padding: 12,
-    borderRadius: 5,
+    backgroundColor: "#DA84C3",
+    padding: 14,
+    borderRadius: 12,
     alignItems: "center",
     marginVertical: 10,
   },
   buttonText: {
     color: "#FFF",
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "600",
   },
   loadingText: {
     textAlign: "center",
     fontSize: 16,
+    color: "#3B3A36",
     marginVertical: 10,
   },
   noResultsText: {
     textAlign: "center",
     fontSize: 16,
-    color: "gray",
+    color: "#A18A96",
     marginTop: 20,
   },
   listContainer: {
@@ -269,15 +278,20 @@ const styles = StyleSheet.create({
   card: {
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
-    backgroundColor: "#FFF",
-    borderRadius: 10,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    paddingBottom: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 5,
     elevation: 3,
-    overflow: "hidden",
-    marginBottom: 10,
   },
   image: {
     width: "100%",
-    height: "65%", // 65% изображения, 35% текста
+    height: "65%",
+    borderTopLeftRadius: 14,
+    borderTopRightRadius: 14,
   },
   details: {
     padding: 8,
@@ -288,6 +302,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "bold",
     textAlign: "center",
+    color: "#3B3A36",
   },
   address: {
     fontSize: 12,
@@ -296,18 +311,62 @@ const styles = StyleSheet.create({
   },
   rating: {
     fontSize: 12,
-    color: "#333",
+    color: "#444",
     marginBottom: 2,
   },
   status: {
     fontSize: 12,
     fontWeight: "bold",
+    color: "#3B3A36",
   },
   locationInfo: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#007AFF", 
+    color: "#DA84C3",
     marginBottom: 8,
     textAlign: "center",
-  },  
+  },
+  screenTitle: {
+    fontSize: 32,
+    fontWeight: "bold",
+    color: "#3B3A36",
+    textAlign: "left",
+    marginBottom: 20,
+  },
+  subheading: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#3B3A36",
+    marginBottom: 20,
+    textAlign: "left",
+    alignSelf: "flex-start",
+  },
+  highlight: {
+    fontWeight: "600",
+    color: "#DA84C3",
+  },
+  topSection: {
+    width: "100%",
+    marginBottom: 12,
+    alignItems: "flex-start",
+  },
+  screenTitle: {
+    fontSize: 32,
+    fontWeight: "bold",
+    color: "#3B3A36",
+    marginBottom: 20,
+    textAlign: "left",
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#3B3A36",
+    marginBottom: 10,
+    textAlign: "left",
+  },
+  weekRange: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#A18A96",
+  },
 });
