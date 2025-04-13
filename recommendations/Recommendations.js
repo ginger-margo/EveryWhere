@@ -39,7 +39,9 @@ export default function RecommendationsScreen() {
     { label: "Bars", value: "bar" },
     { label: "Parks", value: "park" },
     { label: "Museums", value: "museum" },
-    { label: "Shopping Malls", value: "shopping_mall" },
+    { label: "Shopping", value: "shopping_mall" },
+    { label: "Sport", value: "gym" },
+    { label: "Groceries", value: "grocery_or_supermarket" },
   ]);
 
   useEffect(() => {
@@ -73,6 +75,8 @@ export default function RecommendationsScreen() {
       setSelectedCategory("park");
     } else if (type === "work") {
       setSelectedCategory("cafe");
+    } else if (type) {
+      setSelectedCategory(type);
     }
   }, [type, placeLocation]);
   
@@ -87,12 +91,25 @@ export default function RecommendationsScreen() {
       return;
     }
 
+    const typeToCategoryMap = {
+      home: "park",
+      work: "cafe",
+      cafe: "cafe",
+      restaurant: "restaurant",
+      gym: "gym",
+      groceries: "grocery_or_supermarket",
+      bar: "bar",
+    };
+    
+
     setLoading(true);
+    const category = typeToCategoryMap[type] || selectedCategory || "bar";
     const results = await getNearbyPlaces(
       location.latitude,
       location.longitude,
-      selectedCategory
+      category
     );
+    
     setPlaces(results);
     setLoading(false);
   };

@@ -1,5 +1,5 @@
 import { collection, doc, setDoc, getDocs, deleteDoc } from "firebase/firestore";
-import { firestore } from "../firebase/config"; // adjust path if needed
+import { firestore } from "../firebase/config"; 
 
 export const seedMostVisitedPlaces = async (uid) => {
   if (!uid) {

@@ -67,10 +67,15 @@ export const transformLocationsForRadius = (locations, radius) => {
 };
 
 export const returnGeocodedLocation = async ({latitude, longitude}) => {
-      const result = await Location.reverseGeocodeAsync({
-        latitude,
-        longitude,
-      });
+      let result = {};
+      try {
+        // result = await Location.reverseGeocodeAsync({
+        //   latitude,
+        //   longitude,
+       // });
+      } catch (e){
+        console.error(e);
+      }
       return result;
 }
 
