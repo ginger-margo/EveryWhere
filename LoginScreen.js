@@ -1,8 +1,18 @@
 import React, { useState } from "react";
-import { View, TextInput, TouchableOpacity, Text, StyleSheet } from "react-native";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
+import {
+  View,
+  TextInput,
+  TouchableOpacity,
+  Text,
+  StyleSheet,
+} from "react-native";
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+} from "firebase/auth";
 import { auth, firestore } from "./firebase/config";
 import { setDoc, doc } from "firebase/firestore";
+import { LinearGradient } from "expo-linear-gradient";
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
@@ -11,12 +21,20 @@ export default function LoginScreen() {
 
   const handleSignIn = async () => {
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       const user = userCredential.user;
-      await setDoc(doc(firestore, `users/${user.uid}`), {
-        email: user.email,
-        lastLogin: new Date(),
-      }, { merge: true });
+      await setDoc(
+        doc(firestore, `users/${user.uid}`),
+        {
+          email: user.email,
+          lastLogin: new Date(),
+        },
+        { merge: true }
+      );
       setMessage("Signed in successfully!");
     } catch (error) {
       setMessage(`Error: ${error.message}`);
@@ -25,7 +43,11 @@ export default function LoginScreen() {
 
   const handleSignUp = async () => {
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       const user = userCredential.user;
       await setDoc(doc(firestore, `users/${user.uid}`), {
         email: user.email,
@@ -38,7 +60,10 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <LinearGradient
+      colors={["#355E3B", "#A4C3A2", "#F2EEE5"]}
+      style={styles.container}
+    >
       <Text style={styles.title}>EveryWhere</Text>
       <Text style={styles.subtitle}>Log in or sign up to begin exploring</Text>
 
@@ -62,12 +87,17 @@ export default function LoginScreen() {
         <Text style={styles.buttonText}>Sign In</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={[styles.button, styles.secondaryButton]} onPress={handleSignUp}>
-        <Text style={[styles.buttonText, styles.secondaryButtonText]}>Sign Up</Text>
+      <TouchableOpacity
+        style={[styles.button, styles.secondaryButton]}
+        onPress={handleSignUp}
+      >
+        <Text style={[styles.buttonText, styles.secondaryButtonText]}>
+          Sign Up
+        </Text>
       </TouchableOpacity>
 
       {message ? <Text style={styles.message}>{message}</Text> : null}
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -87,7 +117,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    color: "#A18A96",
+    color: "#FFFFFF",
     marginBottom: 30,
     textAlign: "center",
   },
