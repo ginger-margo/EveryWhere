@@ -10,7 +10,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 // Import Screens
 import LoginScreen from "./LoginScreen";
 import Map from "./map/Map";
-import ProfileScreen from "./Profile";
+import ProfileScreen from "./profile/Profile";
 import RecommendationsScreen from "./recommendations/Recommendations";
 
 // Create Bottom Tab Navigator

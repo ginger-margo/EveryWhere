@@ -39,7 +39,7 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Every Where</Text>
+      <Text style={styles.title}>EveryWhere</Text>
       <Text style={styles.subtitle}>Log in or sign up to begin exploring</Text>
 
       <TextInput

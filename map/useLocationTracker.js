@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import * as Location from 'expo-location';
-import {returnGeocodedLocation} from './locationUtils';
 
 // Haversine Formula to calculate distance between two points
 const calculateDistance = (lat1, lon1, lat2, lon2) => {

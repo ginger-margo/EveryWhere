@@ -1,20 +1,21 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, Dimensions } from "react-native";
 import { LineChart } from "react-native-chart-kit";
-import { firestore, auth } from "./firebase/config";
+import { firestore, auth } from "../firebase/config";
 import { collection, query, where, getDocs, doc } from "firebase/firestore";
-import useLocationTracker from "./map/useLocationTracker";
+import useLocationTracker from "../map/useLocationTracker";
 import * as turf from "@turf/turf"; // Turf.js for geospatial calculations
 import * as Location from "expo-location"; // Location services
 import {
   returnGeocodedLocation,
   getWeeklyDistances,
-} from "./map/locationUtils";
-import { getMostVisitedPlaces } from "./map/locationTracker";
-import { fetchLocationPoints } from "./dataLayer";
+} from "../map/locationUtils";
+import { getMostVisitedPlaces } from "../map/locationTracker";
+import { fetchLocationPoints } from "../dataLayer";
 import { ScrollView } from "react-native";
 import moment from "moment";
 import { PanGestureHandler } from "react-native-gesture-handler";
+import useCityBoundary from "./useCityBoundary";
 
 const screenWidth = Dimensions.get("window").width;
 const screenHeight = Dimensions.get("window").height;
@@ -44,8 +45,9 @@ export default function ProfileScreen() {
   const [mostVisitedPlace, setMostVisitedPlace] = useState(
     "Fetching location..."
   );
+  const [cityExplored, setCityExplored] = useState(0);
+  const [cityName, setCityName] = useState("City");
 
-  const cityArea = 117.8; // TODO - get current city
   const worldLandArea = 148940000; // World's land area in km²
 
   useEffect(() => {
@@ -144,9 +146,36 @@ export default function ProfileScreen() {
     })();
   }, []);
 
+  const { boundingBox, cityName: city, loading, error } = useCityBoundary();
+
+  useEffect(() => {
+    if (!loading && boundingBox && trail.length > 0) {
+      const filteredTrail = cropTrailToBox(trail, boundingBox);
+      const shadedArea = calculateShadedArea(filteredTrail);
+      const percent = (shadedArea / cityArea) * 100;
+      setCityExplored(`${percent.toFixed(2)}%`);
+      setCityName(city);
+      console.log(`${city} explored: ${percent.toFixed(2)}%`);
+    }
+  }, [boundingBox, loading, trail]);
+
+  const isWithinBoundingBox = (point, bounds) => {
+    return (
+      point.latitude >= bounds.minLatitude &&
+      point.latitude <= bounds.maxLatitude &&
+      point.longitude >= bounds.minLongitude &&
+      point.longitude <= bounds.maxLongitude
+    );
+  };
+
+  const cropTrailToBox = (trail, bounds) => {
+    return trail.filter((point) => isWithinBoundingBox(point, bounds));
+  };
+
   // Calculate the exact shaded area
-  const shadedArea = calculateShadedArea(trail, 10); // Width of trail = 10m
-  const cityExplored = (shadedArea / cityArea) * 100;
+  const shadedArea = calculateShadedArea(trail);
+  const cityArea = 117.8; // площадь Дублина, км²
+  // const cityExplored = (shadedArea / cityArea) * 100;
   const worldExplored = (shadedArea / worldLandArea) * 100;
 
   // Finding this week
@@ -220,7 +249,7 @@ export default function ProfileScreen() {
         </View>
         <View style={styles.box}>
           <Text style={styles.boxText}>
-            🌍 {cityExplored.toFixed(2)}% of City Explored
+            🌍 {cityExplored.toFixed(2)}% of {cityName} Explored
           </Text>
         </View>
         <View style={styles.box}>

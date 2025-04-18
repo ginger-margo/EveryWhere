@@ -26,63 +26,6 @@ const locationIcons = {
   cafe: "☕️",
 };
 
-const PLACES = [
-  {
-    latitude: 53.3509935,
-    longitude: -6.2773878,
-    count: 8,
-    timeSpent: 300,
-    type: "home",
-  },
-  {
-    latitude: 53.3385303,
-    longitude: -6.2691175,
-    count: 5,
-    timeSpent: 200,
-    type: "work",
-  },
-  {
-    //it's a trap cafe
-    latitude: 53.3400223,
-    longitude: -6.2662978,
-    count: 10,
-    timeSpent: 50,
-    type: "cafe",
-  },
-  {
-    //gym
-    latitude: 53.348242,
-    longitude: -6.2811017,
-    count: 5,
-    timeSpent: 5,
-    type: "gym",
-  },
-  {
-    // cobblestones pub
-    latitude: 53.3488314,
-    longitude: -6.2808707,
-    count: 1,
-    timeSpent: 11,
-    type: "bar",
-  },
-  {
-    //lidl
-    latitude: 53.3502178,
-    longitude: -6.279085,
-    count: 10,
-    timeSpent: 2,
-    type: "grocery",
-  },
-  {
-    //ohenix park
-    latitude: 53.3539102,
-    longitude: -6.3229063,
-    count: 3,
-    timeSpent: 4,
-    type: "parks",
-  },
-];
-
 export default function Map() {
   const [location, setLocation] = useState(null);
   const [trail, setTrail] = useState([]);
@@ -94,34 +37,29 @@ export default function Map() {
   const navigation = useNavigation();
 
   useEffect(() => {
-    setMostVisitedPlaces(PLACES);
-  }, []);
-
-  useEffect(() => {
     (async () => {
-      const places = await getMostVisitedPlaces(auth.currentUser.uid);
+      const places = await getMostVisitedPlaces(userId);
+      console.log(places, "These are the places");
       console.log("Got most visited places");
-      let locations = places
-        .sort((a, b) => {
-          return b.timeSpent - a.timeSpent;
-        })
-        .filter((place) => {
-          return place.type != "home" && place.type != "work";
-        })
-        .map(async (place) => {
-          let type = place.type;
-          //const result = await returnGeocodedLocation(place);
-          return {
-            ...place,
-            icon: locationIcons[type] || "🏆",
-            //name: result[0]?.name || "Unknown Place"
-            name: "Unknown Place",
-          };
-        });
+
+      const locations = await Promise.all(
+        places
+          .sort((a, b) => b.timeSpent - a.timeSpent)
+          .filter((place) => place.type !== "home" && place.type !== "work")
+          .map(async (place) => {
+            let type = place.type;
+            return {
+              ...place,
+              icon: locationIcons[type] || "🏆",
+              name: "Unknown Place",
+            };
+          })
+      );
+
       console.log("Locations to display", locations);
       setMostVisitedPlaces(locations);
     })();
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     const auth = getAuth();
@@ -145,7 +83,6 @@ export default function Map() {
         timeSpent: 50,
         type: "cafe",
       });
-      fetchAndGeocodeMostVisitedPlaces(userId);
     };
     fetchHomeAndWork();
   }, [userId]);
@@ -258,7 +195,7 @@ export default function Map() {
                 }
               >
                 <View style={{ padding: 5 }}>
-                  <Text>Go to Home Details</Text>
+                  <Text>Discover around Home</Text>
                 </View>
               </Callout>
             </Marker>
@@ -274,16 +211,13 @@ export default function Map() {
                 }
               >
                 <View style={{ padding: 5 }}>
-                  <Text>Go to Work Details</Text>
+                  <Text>Discover around Work/Study</Text>
                 </View>
               </Callout>
             </Marker>
           )}
           {mostVisitedPlaces?.map((place, index) => (
-            <Marker
-              key={`${place.latitude}-${place.longitude}-${index}`}
-              coordinate={place}
-            >
+            <Marker coordinate={place} key={index}>
               <Text style={{ fontSize: 30 }}>
                 {locationIcons[place.type] || "💟"}
               </Text>
@@ -295,11 +229,7 @@ export default function Map() {
                   })
                 }
               >
-                <View style={{ padding: 5 }}>
-                  <Text numberOfLines={1} ellipsizeMode="tail">
-                    Go to {place.type} Details
-                  </Text>
-                </View>
+                <Text>See more</Text>
               </Callout>
             </Marker>
           ))}

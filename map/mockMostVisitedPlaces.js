@@ -1,6 +1,8 @@
 import { collection, doc, setDoc, getDocs, deleteDoc } from "firebase/firestore";
 import { firestore } from "../firebase/config"; 
+import {returnGeocodedLocation} from "./locationUtils";
 
+// for testing purposes
 export const seedMostVisitedPlaces = async (uid) => {
   if (!uid) {
     console.error("UID is required.");
@@ -66,7 +68,6 @@ export const seedMostVisitedPlaces = async (uid) => {
 
   try {
     const mostVisitedCollection = collection(firestore, "locations", uid, "mostVisitedPlaces");
-    console.error("HELP");
 
     // Delete existing entries if needed (optional cleanup)
     // You can also skip this part if you want to just append
@@ -77,7 +78,10 @@ export const seedMostVisitedPlaces = async (uid) => {
     await Promise.all(deletePromises);
 
     // Add each place as a new document
-    const writePromises = places.map((place) => {
+    const writePromises = places.map( async (place) => {
+      const result = await returnGeocodedLocation(place);
+      console.log(result);
+      place.name = result[0]?.name;
       const newDocRef = doc(mostVisitedCollection); // auto-generated ID
       return setDoc(newDocRef, place);
     });

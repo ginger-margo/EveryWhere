@@ -1,11 +1,10 @@
-import * as TaskManager from 'expo-task-manager';
-import * as Location from 'expo-location';
+import * as TaskManager from "expo-task-manager";
+import * as Location from "expo-location";
 import { collection, getDocs } from "firebase/firestore";
 import { firestore } from "../firebase/config";
 import { GOOGLE_PLACES_API_KEY } from "@env";
 import moment from "moment";
 import { fetchLocationPoints } from "../dataLayer";
-
 
 const LOCATION_TASK_NAME = "background-location-task";
 
@@ -33,14 +32,14 @@ export const startBackgroundLocationTracking = async () => {
   }
 };
 
-
 const adjustCoordinatesForRadius = (location, radius) => {
   const earthRadiusInMeters = 111320; // Радиус земли для широты
   const latitude = location.latitude;
   const longitude = location.longitude;
 
   const deltaLatitude = radius / earthRadiusInMeters; // Смещение по широте
-  const deltaLongitude = radius / (earthRadiusInMeters * Math.cos(latitude * Math.PI / 180)); // Смещение по долготе
+  const deltaLongitude =
+    radius / (earthRadiusInMeters * Math.cos((latitude * Math.PI) / 180)); // Смещение по долготе
 
   return {
     minLatitude: latitude - deltaLatitude,
@@ -66,18 +65,18 @@ export const transformLocationsForRadius = (locations, radius) => {
   });
 };
 
-export const returnGeocodedLocation = async ({latitude, longitude}) => {
-      let result = {};
-      try {
-        // result = await Location.reverseGeocodeAsync({
-        //   latitude,
-        //   longitude,
-       // });
-      } catch (e){
-        console.error(e);
-      }
-      return result;
-}
+export const returnGeocodedLocation = async ({ latitude, longitude }) => {
+  let result = {};
+  try {
+    result = await Location.reverseGeocodeAsync({
+      latitude,
+      longitude,
+    });
+  } catch (e) {
+    console.error(e);
+  }
+  return result;
+};
 
 const reverseGeocode = async (latitude, longitude) => {
   const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${GOOGLE_PLACES_API_KEY}`;
@@ -95,7 +94,6 @@ const reverseGeocode = async (latitude, longitude) => {
   }
 };
 
-
 // Get geocoded most visited places
 export const fetchAndGeocodeMostVisitedPlaces = async (uid) => {
   if (!uid) {
@@ -105,7 +103,10 @@ export const fetchAndGeocodeMostVisitedPlaces = async (uid) => {
 
   try {
     // Reference to the 'mostVisitedPlaces' subcollection
-    const mostVisitedRef = collection(firestore, `locations/${uid}/mostVisitedPlaces`);
+    const mostVisitedRef = collection(
+      firestore,
+      `locations/${uid}/mostVisitedPlaces`
+    );
     const querySnapshot = await getDocs(mostVisitedRef);
 
     if (querySnapshot.empty) {
@@ -122,7 +123,10 @@ export const fetchAndGeocodeMostVisitedPlaces = async (uid) => {
           latitude: locationData.latitude,
           longitude: locationData.longitude,
         });
-        const placeType = await reverseGeocode(locationData.latitude, locationData.longitude);
+        const placeType = await reverseGeocode(
+          locationData.latitude,
+          locationData.longitude
+        );
         geocodedLocations.push({ ...locationData, geocoded });
       }
     }
@@ -166,7 +170,10 @@ function groupPointsByLocation(points) {
 
     if (
       currentGroup.length === 0 ||
-      `${currentGroup[currentGroup.length - 1].latitude.toFixed(3)},${currentGroup[currentGroup.length - 1].longitude.toFixed(3)}` === locationKey
+      `${currentGroup[currentGroup.length - 1].latitude.toFixed(
+        3
+      )},${currentGroup[currentGroup.length - 1].longitude.toFixed(3)}` ===
+        locationKey
     ) {
       currentGroup.push(point);
     } else {
@@ -186,7 +193,7 @@ function groupPointsByLocation(points) {
 function filterValidVisits(grouped) {
   const validVisits = [];
 
-  grouped.forEach(group => {
+  grouped.forEach((group) => {
     const duration = group[group.length - 1].timestamp - group[0].timestamp;
 
     if (duration >= 15 * 60 * 1000) {
@@ -194,7 +201,9 @@ function filterValidVisits(grouped) {
         .unix(Math.floor(group[0].timestamp / 1000))
         .format("ddd");
 
-      const locationKey = `${group[0].latitude.toFixed(3)},${group[0].longitude.toFixed(3)}`;
+      const locationKey = `${group[0].latitude.toFixed(
+        3
+      )},${group[0].longitude.toFixed(3)}`;
       validVisits.push({ day, locationKey });
     }
   });
@@ -214,12 +223,12 @@ function countVisitsPerDay(validVisits) {
     Sun: new Set(),
   };
 
-  validVisits.forEach(visit => {
+  validVisits.forEach((visit) => {
     weekData[visit.day].add(visit.locationKey);
   });
 
   const dayOrder = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  return dayOrder.map(day => weekData[day].size);
+  return dayOrder.map((day) => weekData[day].size);
 }
 
 // Финальная функция для использования
@@ -230,5 +239,3 @@ export async function getWeeklyDistances(userId) {
   const weeklyDistances = countVisitsPerDay(validVisits);
   return weeklyDistances;
 }
-
-
