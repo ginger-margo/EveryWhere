@@ -249,7 +249,7 @@ export default function ProfileScreen() {
         </View>
         <View style={styles.box}>
           <Text style={styles.boxText}>
-            🌍 {cityExplored.toFixed(2)}% of {cityName} Explored
+            🌍 {cityExplored}% of {cityName} Explored
           </Text>
         </View>
         <View style={styles.box}>
@@ -265,13 +265,13 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     padding: 20,
-    backgroundColor: "#F5F3EB", // earthy tone
+    backgroundColor: "#F5F3EB", 
     marginTop: 60,
   },
   header: {
     fontSize: 32,
     fontWeight: "bold",
-    color: "#3B3A36", // charcoal
+    color: "#3B3A36", 
     textAlign: "left",
     marginBottom: 20,
   },
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
   weekRange: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#A18A96", // мягкий серо-розовый оттенок
+    color: "#A18A96", 
     marginTop: 2,
   },
   boxLabel: {

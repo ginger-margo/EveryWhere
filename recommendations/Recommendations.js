@@ -16,10 +16,7 @@ import { getNearbyPlaces } from "./utils";
 import { GOOGLE_PLACES_API_KEY } from "@env";
 import { useRoute } from "@react-navigation/native";
 
-// Получаем ширину экрана
 const { width } = Dimensions.get("window");
-
-// Карточки будут 2 в ряд, 3:4 (75% от ширины)
 const CARD_WIDTH = width / 2.3;
 const CARD_HEIGHT = CARD_WIDTH * 1.6;
 
@@ -31,7 +28,6 @@ export default function RecommendationsScreen() {
   const route = useRoute();
   const { location: placeLocation, type = "current" } = route.params || {};
 
-  // Dropdown state
   const [open, setOpen] = useState(false);
   const [categories, setCategories] = useState([
     { label: "Restaurants", value: "restaurant" },
@@ -58,38 +54,35 @@ export default function RecommendationsScreen() {
           latitude: currentLocation.coords.latitude,
           longitude: currentLocation.coords.longitude,
         });
+        setSelectedCategory(null); // нет категории пока
       } else {
-        // Use passed location (home or work)
         setLocation(placeLocation);
+
+        if (type === "home") {
+          setSelectedCategory("park");
+        } else if (type === "work") {
+          setSelectedCategory("cafe");
+        } else if (type) {
+          setSelectedCategory(type);
+        }
       }
     })();
   }, []);
 
   useEffect(() => {
-    if (placeLocation) {
-      setLocation(placeLocation); // если передано вручную
+    if (location && (selectedCategory !== null || type === "current")) {
+      fetchPlaces();
     }
-
-    // Установим умолчания
-    if (type === "home") {
-      setSelectedCategory("park");
-    } else if (type === "work") {
-      setSelectedCategory("cafe");
-    } else if (type) {
-      setSelectedCategory(type);
-    }
-  }, [type, placeLocation]);
+  }, [location, selectedCategory]);
 
   const fetchPlaces = async () => {
-    if (!selectedCategory) {
-      alert("Please select a category!");
-      return;
-    }
     if (!location) {
       alert("Location not available yet. Please wait...");
       return;
     }
-
+  
+    setLoading(true);
+  
     const typeToCategoryMap = {
       home: "park",
       work: "cafe",
@@ -99,18 +92,30 @@ export default function RecommendationsScreen() {
       groceries: "grocery_or_supermarket",
       bar: "bar",
     };
-
-    setLoading(true);
-    const category = typeToCategoryMap[type] || selectedCategory || "bar";
+  
+    let category = "point_of_interest"; // по умолчанию ищем всё подряд
+  
+    if (type !== "current") {
+      // если пришли с карты
+      category = typeToCategoryMap[type] || selectedCategory || "point_of_interest";
+    } else if (selectedCategory) {
+      // если выбрал в выпадающем меню
+      category = selectedCategory;
+    }
+  
+    const ignoreRadius = !selectedCategory;
+  
     const results = await getNearbyPlaces(
       location.latitude,
       location.longitude,
-      category
+      category,
+      ignoreRadius
     );
-
+  
     setPlaces(results);
     setLoading(false);
   };
+  
 
   const renderPlace = ({ item }) => {
     const photoUrl = item.photos
@@ -121,17 +126,17 @@ export default function RecommendationsScreen() {
       <View style={styles.card}>
         <Image source={{ uri: photoUrl }} style={styles.image} />
         <View style={styles.details}>
-          <Text style={styles.name} numberOfLines={2} ellipsizeMode="tail">
+          <Text style={styles.name} numberOfLines={2}>
             {item.name}
           </Text>
-          <Text style={styles.address} numberOfLines={1} ellipsizeMode="tail">
+          <Text style={styles.address} numberOfLines={1}>
             {item.vicinity}
           </Text>
           <Text style={styles.rating}>
             ⭐ {item.rating || "N/A"} | 💰 {item.price_level ?? "N/A"}
           </Text>
           <Text style={styles.status}>
-            {item.opening_hours?.open_now ? "🟢 Open Now" : "🔴 Closed"}
+            {item.opening_hours?.open_now ? "🟢 Open" : "🔴 Closed"}
           </Text>
         </View>
       </View>
@@ -163,8 +168,8 @@ export default function RecommendationsScreen() {
             </Text>
           </Text>
         </View>
+
         <View style={styles.header}>
-          {/* Dropdown Selector */}
           <DropDownPicker
             open={open}
             value={selectedCategory}
@@ -178,26 +183,22 @@ export default function RecommendationsScreen() {
             dropDownStyle={styles.dropdownBox}
           />
 
-          {/* Find Button */}
           <TouchableOpacity style={styles.button} onPress={fetchPlaces}>
             <Text style={styles.buttonText}>Find</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Loading & Results */}
         {loading ? (
           <Text style={styles.loadingText}>Searching...</Text>
         ) : places.length === 0 ? (
-          <Text style={styles.noResultsText}>
-            No places found. Choose a category and click Find.
-          </Text>
+          <Text style={styles.noResultsText}>No places found.</Text>
         ) : (
           <FlatList
             data={places}
             keyExtractor={(item, index) => index.toString()}
             renderItem={renderPlace}
-            numColumns={2} // 2 карточки в ряд
-            columnWrapperStyle={styles.row} // Добавляет отступы между колонками
+            numColumns={2}
+            columnWrapperStyle={styles.row}
             contentContainerStyle={styles.listContainer}
           />
         )}
@@ -224,13 +225,6 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
     zIndex: 10,
-  },
-  heading: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#3B3A36",
-    textAlign: "center",
-    marginBottom: 15,
   },
   dropdownContainer: {
     height: 50,
@@ -320,43 +314,12 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#3B3A36",
   },
-  locationInfo: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#DA84C3",
-    marginBottom: 8,
-    textAlign: "center",
-  },
   screenTitle: {
     fontSize: 32,
     fontWeight: "bold",
     color: "#3B3A36",
     textAlign: "left",
     marginBottom: 20,
-  },
-  subheading: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#3B3A36",
-    marginBottom: 20,
-    textAlign: "left",
-    alignSelf: "flex-start",
-  },
-  highlight: {
-    fontWeight: "600",
-    color: "#DA84C3",
-  },
-  topSection: {
-    width: "100%",
-    marginBottom: 12,
-    alignItems: "flex-start",
-  },
-  screenTitle: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#3B3A36",
-    marginBottom: 20,
-    textAlign: "left",
   },
   sectionTitle: {
     fontSize: 18,
@@ -364,6 +327,11 @@ const styles = StyleSheet.create({
     color: "#3B3A36",
     marginBottom: 10,
     textAlign: "left",
+  },
+  topSection: {
+    width: "100%",
+    marginBottom: 12,
+    alignItems: "flex-start",
   },
   weekRange: {
     fontSize: 14,
