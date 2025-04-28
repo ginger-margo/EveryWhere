@@ -30,6 +30,7 @@ export default function RecommendationsScreen() {
 
   const [open, setOpen] = useState(false);
   const [categories, setCategories] = useState([
+    { label: "Anything", value: "point_of_interest" },
     { label: "Restaurants", value: "restaurant" },
     { label: "Cafes", value: "cafe" },
     { label: "Bars", value: "bar" },
@@ -39,6 +40,7 @@ export default function RecommendationsScreen() {
     { label: "Sport", value: "gym" },
     { label: "Groceries", value: "grocery_or_supermarket" },
   ]);
+  
 
   useEffect(() => {
     (async () => {
@@ -66,6 +68,9 @@ export default function RecommendationsScreen() {
           setSelectedCategory(type);
         }
       }
+      return () => {
+        setSelectedCategory(null);
+      };
     })();
   }, []);
 
@@ -80,9 +85,9 @@ export default function RecommendationsScreen() {
       alert("Location not available yet. Please wait...");
       return;
     }
-  
+
     setLoading(true);
-  
+
     const typeToCategoryMap = {
       home: "park",
       work: "cafe",
@@ -92,30 +97,31 @@ export default function RecommendationsScreen() {
       groceries: "grocery_or_supermarket",
       bar: "bar",
     };
-  
+
     let category = "point_of_interest"; // по умолчанию ищем всё подряд
-  
+
     if (type !== "current") {
       // если пришли с карты
-      category = typeToCategoryMap[type] || selectedCategory || "point_of_interest";
+      category =
+        typeToCategoryMap[type] || selectedCategory || "point_of_interest";
+      setSelectedCategory(category);
     } else if (selectedCategory) {
       // если выбрал в выпадающем меню
       category = selectedCategory;
     }
-  
+
     const ignoreRadius = !selectedCategory;
-  
+
     const results = await getNearbyPlaces(
       location.latitude,
       location.longitude,
       category,
       ignoreRadius
     );
-  
+
     setPlaces(results);
     setLoading(false);
   };
-  
 
   const renderPlace = ({ item }) => {
     const photoUrl = item.photos

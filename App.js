@@ -51,7 +51,7 @@ export default function App() {
 
   useEffect(() => {
     if (!auth) {
-      console.log("Firebase is not initialized yet.");
+      console.error("Firebase is not initialized yet.");
       return;
     }
 

@@ -15,13 +15,9 @@ export const getNearbyPlaces = async (
     radius ? `radius=${radius}` : "rankby=distance"
   }&type=${type}&key=${GOOGLE_PLACES_API_KEY}`;
 
-  console.log("Google Places full URL:", url);
-
   try {
     const response = await axios.get(url);
     const results = response.data.results;
-
-    console.log("Results length before filtering:", response.data.results.length);
 
     const filtered = results.filter(
       (place) =>
@@ -42,8 +38,6 @@ export const getNearbyPlaces = async (
           place.name?.toLowerCase().includes(word)
         )
     );
-
-    console.log("Results length after filtering:", filtered.length);
 
     return filtered.sort(() => Math.random() - 0.5).slice(0, 10);
   } catch (error) {

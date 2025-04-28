@@ -21,14 +21,13 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
 export const startBackgroundLocationTracking = async () => {
   const { status } = await Location.requestBackgroundPermissionsAsync();
   if (status === "granted") {
-    console.log("Location Tracking started");
     await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
       accuracy: Location.Accuracy.High,
       distanceInterval: 50, // Minimum change in meters for an update
       deferredUpdatesInterval: 60000, // Minimum time in ms for updates
     });
   } else {
-    console.log("Permission denied");
+    console.error("Permission denied");
   }
 };
 
@@ -110,7 +109,6 @@ export const fetchAndGeocodeMostVisitedPlaces = async (uid) => {
     const querySnapshot = await getDocs(mostVisitedRef);
 
     if (querySnapshot.empty) {
-      console.log("No most visited places found.");
       return [];
     }
 

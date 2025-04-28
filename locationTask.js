@@ -31,7 +31,7 @@ export async function startBackgroundUpdate() {
       },
     });
   } else {
-    console.log('Background location permission not granted');
+    console.error('Background location permission not granted');
   }
 }
 

@@ -155,7 +155,6 @@ export default function ProfileScreen() {
       const percent = (shadedArea / cityArea) * 100;
       setCityExplored(`${percent.toFixed(2)}%`);
       setCityName(city);
-      console.log(`${city} explored: ${percent.toFixed(2)}%`);
     }
   }, [boundingBox, loading, trail]);
 

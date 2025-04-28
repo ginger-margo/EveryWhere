@@ -69,7 +69,6 @@ const updateMostVisitedPlaces = async (latitude, longitude) => {
       await addDoc(mostVisitedRef, place);
     }
 
-    console.log("Updated most visited places in Firestore under locations/{userId}/mostVisitedPlaces.");
   } catch (error) {
     console.error("Error updating most visited places:", error);
   }
@@ -94,7 +93,7 @@ export const getMostVisitedPlaces = async (uid) => {
     const places = snapshot.docs.map(doc => doc.data());
     return places;
   } catch (e) {
-    console.log("Error getting most visited places", e);
+    console.error("Error getting most visited places", e);
     return [];
   }
 }

@@ -80,7 +80,6 @@ export const seedMostVisitedPlaces = async (uid) => {
     // Add each place as a new document
     const writePromises = places.map( async (place) => {
       const result = await returnGeocodedLocation(place);
-      console.log(result);
       place.name = result[0]?.name;
       const newDocRef = doc(mostVisitedCollection); // auto-generated ID
       return setDoc(newDocRef, place);
@@ -88,7 +87,6 @@ export const seedMostVisitedPlaces = async (uid) => {
 
     await Promise.all(writePromises);
 
-    console.log("Successfully seeded mostVisitedPlaces in Firestore.");
   } catch (error) {
     console.error("Error writing mostVisitedPlaces to Firestore:", error);
   }

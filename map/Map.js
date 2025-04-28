@@ -39,8 +39,6 @@ export default function Map() {
   useEffect(() => {
     (async () => {
       const places = await getMostVisitedPlaces(userId);
-      console.log(places, "These are the places");
-      console.log("Got most visited places");
 
       const locations = await Promise.all(
         places
@@ -56,7 +54,6 @@ export default function Map() {
           })
       );
 
-      console.log("Locations to display", locations);
       setMostVisitedPlaces(locations);
     })();
   }, [userId]);
