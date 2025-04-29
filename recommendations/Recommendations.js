@@ -15,6 +15,9 @@ import DropDownPicker from "react-native-dropdown-picker";
 import { getNearbyPlaces } from "./utils";
 import { GOOGLE_PLACES_API_KEY } from "@env";
 import { useRoute } from "@react-navigation/native";
+import { setDoc, doc } from "firebase/firestore";
+import { auth, firestore } from "../firebase/config";
+import { Ionicons } from "@expo/vector-icons";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width / 2.3;
@@ -27,7 +30,7 @@ export default function RecommendationsScreen() {
   const [location, setLocation] = useState(null);
   const route = useRoute();
   const { location: placeLocation, type = "current" } = route.params || {};
-
+  const [favoritesMap, setFavoritesMap] = useState({});
   const [open, setOpen] = useState(false);
   const [categories, setCategories] = useState([
     { label: "Anything", value: "point_of_interest" },
@@ -40,7 +43,6 @@ export default function RecommendationsScreen() {
     { label: "Sport", value: "gym" },
     { label: "Groceries", value: "grocery_or_supermarket" },
   ]);
-  
 
   useEffect(() => {
     (async () => {
@@ -130,7 +132,20 @@ export default function RecommendationsScreen() {
 
     return (
       <View style={styles.card}>
-        <Image source={{ uri: photoUrl }} style={styles.image} />
+        <View style={styles.imageContainer}>
+          <Image source={{ uri: photoUrl }} style={styles.image} />
+          <TouchableOpacity
+            style={styles.favoriteIcon}
+            onPress={() => handleToggleFavorite(item)}
+          >
+            <Ionicons
+              name={favoritesMap[item.place_id] ? "star" : "star-outline"}
+              size={24}
+              color="#DA84C3"
+            />
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.details}>
           <Text style={styles.name} numberOfLines={2}>
             {item.name}
@@ -147,6 +162,63 @@ export default function RecommendationsScreen() {
         </View>
       </View>
     );
+  };
+
+  const handleSavePlace = async (place) => {
+    const user = auth.currentUser;
+    if (!user) {
+      alert("You must be logged in to save places.");
+      return;
+    }
+
+    try {
+      const favoriteRef = doc(
+        firestore,
+        `users/${user.uid}/favorites/${place.place_id}`
+      );
+      await setDoc(favoriteRef, {
+        name: place.name,
+        latitude: place.geometry.location.lat,
+        longitude: place.geometry.location.lng,
+        address: place.vicinity,
+        type: place.types?.[0] || "point_of_interest",
+        savedAt: Date.now(),
+      });
+      alert("Place saved to favorites!");
+    } catch (error) {
+      console.error("Error saving favorite:", error);
+      alert("Failed to save place.");
+    }
+  };
+
+  const handleToggleFavorite = async (place) => {
+    const user = auth.currentUser;
+    if (!user) {
+      alert("You must be logged in to save places.");
+      return;
+    }
+
+    const favoriteRef = doc(
+      firestore,
+      `users/${user.uid}/favorites/${place.place_id}`
+    );
+
+    if (favoritesMap[place.place_id]) {
+      // Если уже в избранном - удалить
+      await deleteDoc(favoriteRef);
+      setFavoritesMap((prev) => ({ ...prev, [place.place_id]: false }));
+    } else {
+      // Иначе сохранить
+      await setDoc(favoriteRef, {
+        name: place.name,
+        latitude: place.geometry.location.lat,
+        longitude: place.geometry.location.lng,
+        address: place.vicinity,
+        type: place.types?.[0] || "point_of_interest",
+        savedAt: Date.now(),
+      });
+      setFavoritesMap((prev) => ({ ...prev, [place.place_id]: true }));
+    }
   };
 
   return (
@@ -343,5 +415,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
     color: "#A18A96",
+  },
+  imageContainer: {
+    position: "relative",
+  },
+  favoriteIcon: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    backgroundColor: "rgba(255,255,255,0.7)",
+    borderRadius: 20,
+    padding: 5,
   },
 });
