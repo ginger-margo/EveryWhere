@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { StyleSheet, View, Text } from "react-native";
+import { StyleSheet, View, Text, TouchableOpacity } from "react-native";
 import MapView, { Marker, Polyline } from "react-native-maps";
 import * as Location from "expo-location";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
@@ -12,7 +12,6 @@ import {
   fetchAndGeocodeMostVisitedPlaces,
 } from "./locationUtils";
 import { detectHomeAndWork } from "./locationTracker";
-import { seedMostVisitedPlaces } from "./mockMostVisitedPlaces";
 import { useNavigation } from "@react-navigation/native";
 import { Callout } from "react-native-maps";
 import { getMostVisitedPlaces } from "./locationTracker";
@@ -35,6 +34,27 @@ export default function Map() {
   const [cafe, setCafe] = useState(null);
   const [mostVisitedPlaces, setMostVisitedPlaces] = useState(null);
   const navigation = useNavigation();
+  const [showFavorites, setShowFavorites] = useState(false);
+  const [favorites, setFavorites] = useState([]);
+
+  const fetchFavorites = async () => {
+    try {
+      const snapshot = await getDocs(
+        collection(firestore, `users/${userId}/favorites`)
+      );
+      const favs = snapshot.docs.map((doc) => doc.data());
+      setFavorites(favs);
+      console.log("Fetched favorites:", favs);
+    } catch (error) {
+      console.error("Error fetching favorites:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (showFavorites && userId) {
+      fetchFavorites();
+    }
+  }, [showFavorites, userId]);
 
   useEffect(() => {
     (async () => {
@@ -134,7 +154,7 @@ export default function Map() {
 
       setTrail([initialCoords]);
 
-      // ✅ Start real-time tracking
+      // Start real-time tracking
       startForegroundLocationTracking(userId);
 
       const locationSubscription = await Location.watchPositionAsync(
@@ -162,8 +182,45 @@ export default function Map() {
     })();
   }, [userId]);
 
+  useEffect(() => {
+    if (userId) {
+      fetchFavorites(); // когда юзер залогинился
+    }
+  }, [userId]);
+
   return (
     <View style={styles.container}>
+      {/* Переключатель */}
+      <View style={styles.switchContainer}>
+        <TouchableOpacity
+          style={[
+            styles.switchButton,
+            !showFavorites && styles.activeSwitchButton,
+          ]}
+          onPress={() => setShowFavorites(false)}
+        >
+          <Text
+            style={!showFavorites ? styles.activeSwitchText : styles.switchText}
+          >
+            Popular
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.switchButton,
+            showFavorites && styles.activeSwitchButton,
+          ]}
+          onPress={() => setShowFavorites(true)}
+        >
+          <Text
+            style={showFavorites ? styles.activeSwitchText : styles.switchText}
+          >
+            Favorites
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Карта */}
       {location ? (
         <MapView
           style={styles.map}
@@ -176,11 +233,14 @@ export default function Map() {
           showsUserLocation={true}
           showsPointsOfInterest={false}
         >
+          {/* Линия пути */}
           <Polyline
             coordinates={trail}
             strokeColor="rgba(218, 132, 195, 0.5)"
             strokeWidth={40}
           />
+
+          {/* Дом */}
           {home && (
             <Marker coordinate={home} title="🏠 Home">
               <Callout
@@ -188,6 +248,7 @@ export default function Map() {
                   navigation.navigate("Recommendations", {
                     location: home,
                     type: "home",
+                    fetchFavoritesFromMap: fetchFavorites,
                   })
                 }
               >
@@ -197,6 +258,8 @@ export default function Map() {
               </Callout>
             </Marker>
           )}
+
+          {/* Работа */}
           {work && (
             <Marker coordinate={work} title="💻 Work/Study">
               <Callout
@@ -204,6 +267,7 @@ export default function Map() {
                   navigation.navigate("Recommendations", {
                     location: work,
                     type: "work",
+                    fetchFavoritesFromMap: fetchFavorites,
                   })
                 }
               >
@@ -213,23 +277,53 @@ export default function Map() {
               </Callout>
             </Marker>
           )}
-          {mostVisitedPlaces?.map((place, index) => (
-            <Marker coordinate={place} key={index}>
-              <Text style={{ fontSize: 30 }}>
-                {locationIcons[place.type] || "💟"}
-              </Text>
-              <Callout
-                onPress={() =>
-                  navigation.navigate("Recommendations", {
-                    location: place,
-                    type: place.type,
-                  })
-                }
-              >
-                <Text>See more</Text>
-              </Callout>
-            </Marker>
-          ))}
+
+          {showFavorites
+            ? favorites?.length > 0 &&
+              favorites.map((fav, index) => (
+                <Marker
+                  key={index}
+                  coordinate={{
+                    latitude: fav.latitude,
+                    longitude: fav.longitude,
+                  }}
+                  title={fav.name || "Favorite Place"}
+                  description={fav.address || ""}
+                  pinColor="#DA84C3" 
+                >
+                  <Callout>
+                    <View style={{ padding: 5 }}>
+                      <Text>{fav.name || "Favorite Place"}</Text>
+                      <Text>{fav.address || ""}</Text>
+                    </View>
+                  </Callout>
+                </Marker>
+              ))
+            : mostVisitedPlaces?.length > 0 &&
+              mostVisitedPlaces.map((place, index) => (
+                <Marker
+                  key={index}
+                  coordinate={{
+                    latitude: place.latitude,
+                    longitude: place.longitude,
+                  }}
+                >
+                  <Text style={{ fontSize: 30 }}>
+                    {locationIcons[place.type] || "💟"}
+                  </Text>
+                  <Callout
+                    onPress={() =>
+                      navigation.navigate("Recommendations", {
+                        location: place,
+                        type: place.type,
+                        fetchFavoritesFromMap: fetchFavorites,
+                      })
+                    }
+                  >
+                    <Text>See more</Text>
+                  </Callout>
+                </Marker>
+              ))}
         </MapView>
       ) : (
         <Text>Loading map...</Text>
@@ -241,4 +335,29 @@ export default function Map() {
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: "center", alignItems: "center" },
   map: { width: "100%", height: "100%" },
+  switchContainer: {
+    position: "absolute",
+    top: 40,
+    flexDirection: "row",
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    borderRadius: 20,
+    overflow: "hidden",
+    alignSelf: "center",
+    zIndex: 10,
+  },
+  switchButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+  },
+  activeSwitchButton: {
+    backgroundColor: "#DA84C3",
+  },
+  switchText: {
+    color: "#3B3A36",
+    fontWeight: "600",
+  },
+  activeSwitchText: {
+    color: "white",
+    fontWeight: "600",
+  },
 });
