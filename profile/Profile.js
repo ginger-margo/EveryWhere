@@ -1,41 +1,44 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, Dimensions } from "react-native";
+import { View, Text, StyleSheet, Dimensions, ScrollView } from "react-native";
 import { LineChart } from "react-native-chart-kit";
 import { firestore, auth } from "../firebase/config";
-import { collection, query, where, getDocs, doc } from "firebase/firestore";
-import useLocationTracker from "../map/useLocationTracker";
-import * as turf from "@turf/turf"; // Turf.js for geospatial calculations
-import * as Location from "expo-location"; // Location services
-import {
-  returnGeocodedLocation,
-  getWeeklyDistances,
-} from "../map/locationUtils";
-import { getMostVisitedPlaces } from "../map/locationTracker";
-import { fetchLocationPoints } from "../dataLayer";
-import { ScrollView } from "react-native";
+import { collection, getDocs } from "firebase/firestore";
+import * as turf from "@turf/turf";
 import moment from "moment";
 import { PanGestureHandler } from "react-native-gesture-handler";
 import useCityBoundary from "./useCityBoundary";
+import { getMostVisitedPlaces } from "../map/locationTracker";
+import { returnGeocodedLocation } from "../map/locationUtils";
+import { fetchLocationPoints } from "../dataLayer";
 
 const screenWidth = Dimensions.get("window").width;
 const screenHeight = Dimensions.get("window").height;
 
-// Function to calculate the total shaded area
+// Helper functions
 const calculateShadedArea = (trail, trailWidthInMeters = 10) => {
-  if (trail.length < 2) return 0; // Need at least two points to form a segment
+  if (trail.length < 2) return 0;
 
   let totalArea = 0;
-
   for (let i = 1; i < trail.length; i++) {
     const point1 = turf.point([trail[i - 1].longitude, trail[i - 1].latitude]);
     const point2 = turf.point([trail[i].longitude, trail[i].latitude]);
-    const distance = turf.distance(point1, point2, { units: "meters" }); // Distance in meters
-
-    const segmentArea = distance * trailWidthInMeters; // Rectangle area
-    totalArea += segmentArea;
+    const distance = turf.distance(point1, point2, { units: "meters" });
+    totalArea += distance * trailWidthInMeters;
   }
+  return totalArea / 1e6; // Convert m² to km²
+};
 
-  return totalArea / 1e6; // Convert from m² to km²
+const isWithinBoundingBox = (point, bounds) => {
+  return (
+    point.latitude >= bounds.minLatitude &&
+    point.latitude <= bounds.maxLatitude &&
+    point.longitude >= bounds.minLongitude &&
+    point.longitude <= bounds.maxLongitude
+  );
+};
+
+const cropTrailToBox = (trail, bounds) => {
+  return trail.filter((point) => isWithinBoundingBox(point, bounds));
 };
 
 export default function ProfileScreen() {
@@ -45,10 +48,57 @@ export default function ProfileScreen() {
   const [mostVisitedPlace, setMostVisitedPlace] = useState(
     "Fetching location..."
   );
-  const [cityExplored, setCityExplored] = useState(0);
+  const [cityExplored, setCityExplored] = useState("0.00");
+  const [worldExplored, setWorldExplored] = useState("0.000000");
   const [cityName, setCityName] = useState("City");
 
-  const worldLandArea = 148940000; // World's land area in km²
+  const worldLandArea = 148940000; // km²
+  const cityArea = 117.8; // Dublin km²
+  const { boundingBox, cityName: city, loading } = useCityBoundary();
+
+  useEffect(() => {
+    if (trail.length === 0) return;
+
+    let shadedArea = 0;
+
+    // Проверка на реалистичность boundingBox
+    const boxIsValid =
+      boundingBox &&
+      Math.abs(boundingBox.maxLatitude - boundingBox.minLatitude) > 0.01 &&
+      Math.abs(boundingBox.maxLongitude - boundingBox.minLongitude) > 0.01;
+
+    if (!loading && boxIsValid) {
+      const filteredTrail = cropTrailToBox(trail, boundingBox);
+      shadedArea = calculateShadedArea(filteredTrail);
+    } else {
+      shadedArea = calculateShadedArea(trail);
+    }
+
+    const cityPercent = (shadedArea / cityArea) * 100;
+    const worldPercent = (shadedArea / worldLandArea) * 100;
+
+    setCityExplored(cityPercent.toFixed(2));
+    setWorldExplored(worldPercent.toFixed(6));
+    setCityName(city || "your city");
+  }, [boundingBox, loading, trail]);
+
+  useEffect(() => {
+    const fetchTrail = async () => {
+      const uid = auth.currentUser?.uid;
+      if (!uid) return;
+
+      const locationsRef = collection(
+        firestore,
+        "locations",
+        uid,
+        "locationData"
+      );
+      const snapshot = await getDocs(locationsRef);
+      const locationData = snapshot.docs.map((doc) => doc.data());
+      setTrail(locationData);
+    };
+    fetchTrail();
+  }, []);
 
   useEffect(() => {
     const fetchWeeklyDistances = async () => {
@@ -76,7 +126,6 @@ export default function ProfileScreen() {
         Sat: new Set(),
         Sun: new Set(),
       };
-
       filtered.forEach((point) => {
         const day = moment(point.timestamp).format("ddd");
         const key = `${point.latitude.toFixed(3)},${point.longitude.toFixed(
@@ -95,89 +144,34 @@ export default function ProfileScreen() {
   }, [weekOffset]);
 
   useEffect(() => {
-    if (!auth.currentUser) return;
+    const fetchTopSpot = async () => {
+      const uid = auth.currentUser?.uid;
+      if (!uid) return;
 
-    const fetchLocationData = async () => {
-      try {
-        const locationsRef = collection(
-          firestore,
-          "locations",
-          auth.currentUser.uid,
-          "locationData"
-        );
-        const locationSnapshot = await getDocs(locationsRef);
-        const locationData = locationSnapshot.docs.map((doc) => doc.data());
+      const places = await getMostVisitedPlaces(uid);
+      const bestPlace = places
+        .sort((a, b) => b.timeSpent - a.timeSpent)
+        .find((place) => place.type !== "home" && place.type !== "work");
 
-        setTrail(locationData);
-      } catch (error) {
-        console.error("Error fetching location data:", error);
+      const locationIcons = {
+        gym: "🏋️‍♀️",
+        home: "🏠",
+        work: "🎒",
+        groceries: "🛒",
+        bar: "🍻",
+        cafe: "☕️",
+      };
+
+      if (bestPlace) {
+        const result = await returnGeocodedLocation(bestPlace);
+        const icon = locationIcons[bestPlace.type] || "🏆";
+        setMostVisitedPlace(icon + " " + (result[0]?.name || "Unknown Place"));
       }
     };
 
-    fetchLocationData();
+    fetchTopSpot();
   }, []);
 
-  const locationIcons = {
-    gym: "🏋️‍♀️",
-    home: "🏠",
-    work: "🎒",
-    groceries: "🛒",
-    bar: "🍻",
-    cafe: "☕️",
-  };
-
-  useEffect(() => {
-    (async () => {
-      const mostVisitedPlaces = await getMostVisitedPlaces(
-        auth.currentUser.uid
-      );
-      let location =
-        mostVisitedPlaces
-          .sort((a, b) => {
-            return b.timeSpent - a.timeSpent;
-          })
-          .find((place) => {
-            return place.type != "home" && place.type != "work";
-          }) || mostVisitedPlace[0];
-      let type = location.type;
-      let icon = locationIcons[type] || "🏆";
-      const result = await returnGeocodedLocation(location);
-      setMostVisitedPlace(icon + " " + result[0]?.name || "Unknown Place");
-    })();
-  }, []);
-
-  const { boundingBox, cityName: city, loading, error } = useCityBoundary();
-
-  useEffect(() => {
-    if (!loading && boundingBox && trail.length > 0) {
-      const filteredTrail = cropTrailToBox(trail, boundingBox);
-      const shadedArea = calculateShadedArea(filteredTrail);
-      const percent = (shadedArea / cityArea) * 100;
-      setCityExplored(`${percent.toFixed(2)}%`);
-      setCityName(city);
-    }
-  }, [boundingBox, loading, trail]);
-
-  const isWithinBoundingBox = (point, bounds) => {
-    return (
-      point.latitude >= bounds.minLatitude &&
-      point.latitude <= bounds.maxLatitude &&
-      point.longitude >= bounds.minLongitude &&
-      point.longitude <= bounds.maxLongitude
-    );
-  };
-
-  const cropTrailToBox = (trail, bounds) => {
-    return trail.filter((point) => isWithinBoundingBox(point, bounds));
-  };
-
-  // Calculate the exact shaded area
-  const shadedArea = calculateShadedArea(trail);
-  const cityArea = 117.8; // площадь Дублина, км²
-  // const cityExplored = (shadedArea / cityArea) * 100;
-  const worldExplored = (shadedArea / worldLandArea) * 100;
-
-  // Finding this week
   const startOfWeek = moment().startOf("isoWeek").add(weekOffset, "weeks");
   const endOfWeek = moment().endOf("isoWeek").add(weekOffset, "weeks");
   const weekRangeText = `${startOfWeek.format("D.MM")} - ${endOfWeek.format(
@@ -195,7 +189,6 @@ export default function ProfileScreen() {
       <PanGestureHandler
         onHandlerStateChange={({ nativeEvent }) => {
           if (nativeEvent.state === 5) {
-            // 5 = END
             if (nativeEvent.translationX > 50) {
               setWeekOffset((prev) => prev - 1);
             } else if (nativeEvent.translationX < -50) {
@@ -243,7 +236,7 @@ export default function ProfileScreen() {
         <View style={styles.box}>
           <Text style={[styles.boxLabel]}>Your top spot:</Text>
           <Text style={[styles.boxText, { color: "#DA84C3" }]}>
-            {mostVisitedPlace || "No data"}
+            {mostVisitedPlace}
           </Text>
         </View>
         <View style={styles.box}>
@@ -253,7 +246,7 @@ export default function ProfileScreen() {
         </View>
         <View style={styles.box}>
           <Text style={styles.boxText}>
-            🗺️ {worldExplored.toFixed(6)}% of World Explored
+            🗺️ {worldExplored}% of World Explored
           </Text>
         </View>
       </View>
@@ -262,59 +255,35 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    backgroundColor: "#F5F3EB", 
-    marginTop: 60,
-  },
+  container: { padding: 20, backgroundColor: "#F5F3EB", marginTop: 60 },
   header: {
     fontSize: 32,
     fontWeight: "bold",
-    color: "#3B3A36", 
-    textAlign: "left",
+    color: "#3B3A36",
     marginBottom: 20,
-  },
-  graphContainer: {
-    alignItems: "center",
-    marginBottom: 20,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
     color: "#3B3A36",
     marginBottom: 10,
-    textAlign: "left",
-    alignSelf: "flex-start",
   },
-  chartStyle: {
-    borderRadius: 10,
-  },
-  gridContainer: {
-    flexDirection: "column",
-    justifyContent: "space-between",
-    marginTop: 20,
-  },
-  box: {
-    width: "98%",
-    padding: 25,
-    backgroundColor: "#FFFFFF",
-    justifyContent: "center",
+  graphContainer: {
     alignItems: "center",
-    marginBottom: 15,
+    marginBottom: 20,
+    backgroundColor: "#FFF",
     borderRadius: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    padding: 20,
+  },
+  chartStyle: { borderRadius: 10 },
+  gridContainer: { marginTop: 20 },
+  box: {
+    width: "100%",
+    padding: 25,
+    backgroundColor: "#FFF",
+    borderRadius: 20,
+    marginBottom: 15,
+    alignItems: "center",
   },
   boxText: {
     fontSize: 16,
@@ -322,23 +291,6 @@ const styles = StyleSheet.create({
     color: "#3B3A36",
     textAlign: "center",
   },
-  weekHeader: {
-    width: "100%",
-    marginBottom: 12,
-    alignItems: "flex-start",
-  },
-
-  weekRange: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#A18A96", 
-    marginTop: 2,
-  },
-  boxLabel: {
-    fontSize: 14,
-    color: "#A18A96",
-    marginBottom: 5,
-    fontWeight: "500",
-    textAlign: "left",
-  },
+  boxLabel: { fontSize: 14, color: "#A18A96", marginBottom: 5 },
+  weekRange: { fontSize: 14, fontWeight: "500", color: "#A18A96" },
 });

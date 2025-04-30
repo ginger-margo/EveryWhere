@@ -39,7 +39,11 @@ const useCityBoundary = () => {
 
         // 4. Fetch bounding box from Nominatim
         const url = `https://nominatim.openstreetmap.org/search?city=${encodeURIComponent(city)}&format=json&limit=1`;
-        const res = await fetch(url);
+        const res = await fetch(url, {
+          headers: {
+            "User-Agent": "EveryWhereApp/1.0 (marefil1711@.com)"
+          }
+        });
         const data = await res.json();
 
         if (!data.length || !data[0].boundingbox) {

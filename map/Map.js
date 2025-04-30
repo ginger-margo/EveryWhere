@@ -115,6 +115,7 @@ export default function Map() {
         );
         const locationSnapshot = await getDocs(locationsRef);
         const locationData = locationSnapshot.docs.map((doc) => doc.data());
+        locationData.sort((a, b) => a.timestamp - b.timestamp);
         const adjustedLocations = transformLocationsForRadius(
           locationData,
           1000
