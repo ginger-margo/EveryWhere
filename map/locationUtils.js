@@ -32,13 +32,13 @@ export const startBackgroundLocationTracking = async () => {
 };
 
 const adjustCoordinatesForRadius = (location, radius) => {
-  const earthRadiusInMeters = 111320; // Радиус земли для широты
+  const earthRadiusInMeters = 111320; // Earth radius
   const latitude = location.latitude;
   const longitude = location.longitude;
 
-  const deltaLatitude = radius / earthRadiusInMeters; // Смещение по широте
+  const deltaLatitude = radius / earthRadiusInMeters; 
   const deltaLongitude =
-    radius / (earthRadiusInMeters * Math.cos((latitude * Math.PI) / 180)); // Смещение по долготе
+    radius / (earthRadiusInMeters * Math.cos((latitude * Math.PI) / 180)); 
 
   return {
     minLatitude: latitude - deltaLatitude,
@@ -48,18 +48,17 @@ const adjustCoordinatesForRadius = (location, radius) => {
   };
 };
 
-// Преобразование данных для расширения зоны захвата
 export const transformLocationsForRadius = (locations, radius) => {
   return locations.map((location) => {
     const adjusted = adjustCoordinatesForRadius(location, radius);
     return {
       ...location,
-      latitude: location.latitude, // Центр остается неизменным
-      longitude: location.longitude, // Центр остается неизменным
-      minLatitude: adjusted.minLatitude, // Нижняя граница
-      maxLatitude: adjusted.maxLatitude, // Верхняя граница
-      minLongitude: adjusted.minLongitude, // Левая граница
-      maxLongitude: adjusted.maxLongitude, // Правая граница
+      latitude: location.latitude, 
+      longitude: location.longitude, 
+      minLatitude: adjusted.minLatitude, 
+      maxLatitude: adjusted.maxLatitude, 
+      minLongitude: adjusted.minLongitude, 
+      maxLongitude: adjusted.maxLongitude, 
     };
   });
 };
@@ -84,7 +83,7 @@ const reverseGeocode = async (latitude, longitude) => {
     const response = await fetch(url);
     const data = await response.json();
     if (data.results.length > 0) {
-      return data.results[0]; // Первый результат (самый точный)
+      return data.results[0]; 
     }
     return null;
   } catch (error) {
@@ -93,7 +92,6 @@ const reverseGeocode = async (latitude, longitude) => {
   }
 };
 
-// Get geocoded most visited places
 export const fetchAndGeocodeMostVisitedPlaces = async (uid) => {
   if (!uid) {
     console.error("UID is required.");
@@ -101,7 +99,6 @@ export const fetchAndGeocodeMostVisitedPlaces = async (uid) => {
   }
 
   try {
-    // Reference to the 'mostVisitedPlaces' subcollection
     const mostVisitedRef = collection(
       firestore,
       `locations/${uid}/mostVisitedPlaces`
@@ -112,7 +109,6 @@ export const fetchAndGeocodeMostVisitedPlaces = async (uid) => {
       return [];
     }
 
-    // Iterate over each location and geocode it
     const geocodedLocations = [];
     for (const doc of querySnapshot.docs) {
       const locationData = doc.data();
@@ -144,7 +140,7 @@ const getLocationTypeFromGoogle = async (latitude, longitude) => {
     const data = await response.json();
 
     if (data.results.length > 0) {
-      const placeType = data.results[0].types; // Example: ["restaurant", "food", "point_of_interest"]
+      const placeType = data.results[0].types; 
       return placeType;
     }
 
@@ -155,7 +151,6 @@ const getLocationTypeFromGoogle = async (latitude, longitude) => {
   }
 };
 
-// Группировка подряд идущих точек по местоположению (округлено до 3 знаков)
 function groupPointsByLocation(points) {
   const grouped = [];
   let currentGroup = [];
@@ -187,7 +182,6 @@ function groupPointsByLocation(points) {
   return grouped;
 }
 
-// Фильтрация только тех групп, где находились ≥ 15 минут
 function filterValidVisits(grouped) {
   const validVisits = [];
 
@@ -209,7 +203,6 @@ function filterValidVisits(grouped) {
   return validVisits;
 }
 
-// Подсчёт уникальных мест по дням недели
 function countVisitsPerDay(validVisits) {
   const weekData = {
     Mon: new Set(),
@@ -229,7 +222,6 @@ function countVisitsPerDay(validVisits) {
   return dayOrder.map((day) => weekData[day].size);
 }
 
-// Финальная функция для использования
 export async function getWeeklyDistances(userId) {
   const points = await fetchLocationPoints(userId);
   const grouped = groupPointsByLocation(points);

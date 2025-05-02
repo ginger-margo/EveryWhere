@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "MyExpoDummy",
-    "slug": "MyExpoDummy",
+    "name": "EveryWhere",
+    "slug": "EveryWhere",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -14,7 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.polina.shnaider.MyExpoDummy",
+      "bundleIdentifier": "com.margarita.filatova.EveryWhere",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "We use your location to track your route.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "We need location access in the background to track your route, even when the app is closed."
@@ -33,7 +33,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.polina.shnaider.MyExpoDummy"
+      "package": "com.margarita.filatova.EveryWhere"
     },
     "web": {
       "favicon": "./assets/favicon.png"

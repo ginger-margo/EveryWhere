@@ -1,8 +1,7 @@
-import { collection, addDoc, doc, getDocs, getDoc, setDoc } from "firebase/firestore";
+import { collection, addDoc, getDocs } from "firebase/firestore";
 import { firestore, auth } from "../firebase/config";
 import * as Location from "expo-location";
 
-// Helper function to calculate distance between two points (Haversine Formula)
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
   const R = 6371; // Earth radius in km
   const dLat = (lat2 - lat1) * (Math.PI / 180);
@@ -24,7 +23,6 @@ const updateMostVisitedPlaces = async (latitude, longitude) => {
   
   const uid = user.uid;
 
-  // Reference to the 'mostVisitedPlaces' subcollection under the 'locations' document
   const mostVisitedRef = collection(firestore, `locations/${uid}/mostVisitedPlaces`);
   
   try {
@@ -38,7 +36,6 @@ const updateMostVisitedPlaces = async (latitude, longitude) => {
     const currentTime = Date.now();
     const timeSpent = arrivalTime ? (currentTime - arrivalTime) / 60000 : 0; // Convert ms to minutes
 
-    // Merge or add new places
     const updatedPlaces = places.map((place) => {
       const dist = calculateDistance(place.latitude, place.longitude, latitude, longitude);
       if (dist < 0.1) { // If within 100m, consider it the same place
@@ -63,8 +60,6 @@ const updateMostVisitedPlaces = async (latitude, longitude) => {
     // Keep only top 10 places
     const top10Places = updatedPlaces.slice(0, 10);
 
-    // Clear the subcollection and add updated places
-    await deleteDocs(mostVisitedRef); // Delete existing docs
     for (const place of top10Places) {
       await addDoc(mostVisitedRef, place);
     }
@@ -72,14 +67,6 @@ const updateMostVisitedPlaces = async (latitude, longitude) => {
   } catch (error) {
     console.error("Error updating most visited places:", error);
   }
-};
-
-// Helper function to delete all documents in a subcollection
-const deleteDocs = async (ref) => {
-  const querySnapshot = await getDocs(ref);
-  querySnapshot.forEach(async (doc) => {
-    await deleteDoc(doc.ref);
-  });
 };
 
 export const getMostVisitedPlaces = async (uid) => {
@@ -98,8 +85,6 @@ export const getMostVisitedPlaces = async (uid) => {
   }
 }
 
-
-// Function to detect Home & Work locations based on time spent
 export const detectHomeAndWork = async (uid) => {
   if (!uid) return { home: null, work: null };
 
@@ -133,7 +118,6 @@ export const detectHomeAndWork = async (uid) => {
   }
 };
 
-// Function to start tracking location & detect time spent at places
 export const startForegroundLocationTracking = async (uid) => {
   if (!uid) {
     console.error("UID is missing. Please provide a valid user ID.");
@@ -155,7 +139,7 @@ export const startForegroundLocationTracking = async (uid) => {
 
       try {
         const locationsRef = collection(firestore, `locations/${uid}/locationData`);
-        await addDoc(locationsRef, data); // Generates a unique document ID automatically
+        await addDoc(locationsRef, data);
       
         if (!currentLocation || calculateDistance(currentLocation.latitude, currentLocation.longitude, data.latitude, data.longitude) > 0.1) {
           // User moved to a new location
